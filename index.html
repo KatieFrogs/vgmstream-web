@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>vgmstream-web</title>
+<style>
+body{
+	transition: background-color 0.5s;
+	background-color: #fff;
+	font-family: sans-serif;
+	font-size: 20px;
+}
+</style>
+</head>
+<body>
+<h2>vgmstream-web</h2>
+<div id="hint">Drag and drop an audio stream file here...</div>
+<audio id="audio" controls style="display:none"></audio>
+<script src="vgmstream-cli.js"></script>
+<script>
+var audio = document.getElementById("audio")
+var hint = document.getElementById("hint")
+
+async function convertFile(file){
+	var filename = file.name
+	var output = filename + ".wav"
+	var data = new Uint8Array(await file.arrayBuffer())
+	var stream = FS.open(filename, "w+")
+	FS.write(stream, data, 0, data.length, 0)
+	FS.close(stream)
+	callMain([filename])
+	FS.unlink(filename)
+	if(!FS.lookupPath(output)){
+		return null
+	}
+	var wav = FS.open(output, "r")
+	var wavdata = new Uint8Array(wav.node.usedBytes)
+	FS.read(wav, wavdata, 0, wav.node.usedBytes, 0)
+	FS.close(wav)
+	FS.unlink(output)
+	return URL.createObjectURL(new Blob([wavdata]))
+}
+
+document.addEventListener("dragover", event => {
+	event.preventDefault()
+	event.dataTransfer.dropEffect = "copy"
+	document.body.style.backgroundColor = "#ccc"
+})
+document.addEventListener("dragleave", () => {
+	document.body.style.backgroundColor = "#fff"
+})
+document.addEventListener("drop", event => {
+	document.body.style.backgroundColor = "#fff"
+	event.preventDefault()
+	var file = event.dataTransfer.files[0]
+	if(file){
+		convertFile(file).then(url => {
+			if(url){
+				if(audio.src){
+					URL.revokeObjectURL(audio.src)
+				}
+				audio.src = url
+				audio.style.display = ""
+				hint.style.display = "none"
+			}else{
+				alert("Could not convert file (check console)")
+			}
+		})
+	}
+})
+</script>
+</body>
+</html>
