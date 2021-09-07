@@ -27,17 +27,29 @@ async function convertFile(file){
 	var stream = FS.open(filename, "w+")
 	FS.write(stream, data, 0, data.length, 0)
 	FS.close(stream)
-	callMain([filename])
-	FS.unlink(filename)
-	if(!FS.lookupPath(output)){
-		return null
+	try{
+		callMain([filename])
+	}catch(e){
+		return {error: {
+			type: "wasm",
+			stack: e
+		}}
+	}finally{
+		FS.unlink(filename)
 	}
-	var wav = FS.open(output, "r")
+	try{
+		var wav = FS.open(output, "r")
+	}catch(e){
+		return {error: {
+			type: "unsupported",
+			stack: e
+		}}
+	}
 	var wavdata = new Uint8Array(wav.node.usedBytes)
 	FS.read(wav, wavdata, 0, wav.node.usedBytes, 0)
 	FS.close(wav)
 	FS.unlink(output)
-	return URL.createObjectURL(new Blob([wavdata]))
+	return {url: URL.createObjectURL(new Blob([wavdata]))}
 }
 
 document.addEventListener("dragover", event => {
@@ -53,16 +65,20 @@ document.addEventListener("drop", event => {
 	event.preventDefault()
 	var file = event.dataTransfer.files[0]
 	if(file){
-		convertFile(file).then(url => {
-			if(url){
+		convertFile(file).then(response => {
+			if(response.error){
+				if(response.error.type === "wasm"){
+					alert("Segmentation fault (core dumped)")
+				}else{
+					alert("Could not convert file")
+				}
+			}else if(response.url){
 				if(audio.src){
 					URL.revokeObjectURL(audio.src)
 				}
-				audio.src = url
+				audio.src = response.url
 				audio.style.display = ""
 				hint.style.display = "none"
-			}else{
-				alert("Could not convert file (check console)")
 			}
 		})
 	}
