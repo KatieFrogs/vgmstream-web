@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <title>vgmstream-web</title>
+<meta name="viewport" content="width=device-width">
 <style>
 body{
 	transition: background-color 0.5s;
@@ -9,16 +11,38 @@ body{
 	font-family: sans-serif;
 	font-size: 20px;
 }
+#input{
+	margin-bottom: 20px;
+}
+#input,
+#download{
+	font-size: 16px;
+}
+#audiobox{
+	display: none;
+}
+#audio{
+	width: 500px;
+	max-width: 100%;
+}
 </style>
 </head>
 <body>
 <h2>vgmstream-web</h2>
-<div id="hint">Drag and drop an audio stream file here...</div>
-<audio id="audio" controls style="display:none"></audio>
+<div><input type="file" id="input"></div>
+<div id="hint">Select or drop an audio stream file here...</div>
+<div id="audiobox">
+	<div><audio id="audio" controls></audio></div>
+	<div><input id="download" type="button" value="Download"></div>
+</div>
 <script src="vgmstream-cli.js"></script>
 <script>
-var audio = document.getElementById("audio")
+var input = document.getElementById("input")
 var hint = document.getElementById("hint")
+var audiobox = document.getElementById("audiobox")
+var audio = document.getElementById("audio")
+var download = document.getElementById("download")
+var dlfilename
 
 async function convertFile(file){
 	var filename = file.name
@@ -49,7 +73,29 @@ async function convertFile(file){
 	FS.read(wav, wavdata, 0, wav.node.usedBytes, 0)
 	FS.close(wav)
 	FS.unlink(output)
-	return {url: URL.createObjectURL(new Blob([wavdata]))}
+	return {
+		filename: output,
+		url: URL.createObjectURL(new Blob([wavdata], {
+			type: "audio/x-wav"
+		}))
+	}
+}
+function insertAudio(response){
+	if(response.error){
+		if(response.error.type === "wasm"){
+			alert("Segmentation fault (core dumped)")
+		}else{
+			alert("Could not convert file")
+		}
+	}else if(response.url){
+		if(audio.src){
+			URL.revokeObjectURL(audio.src)
+		}
+		audio.src = response.url
+		audiobox.style.display = "block"
+		hint.style.display = "none"
+		dlfilename = response.filename
+	}
 }
 
 document.addEventListener("dragover", event => {
@@ -65,23 +111,30 @@ document.addEventListener("drop", event => {
 	event.preventDefault()
 	var file = event.dataTransfer.files[0]
 	if(file){
-		convertFile(file).then(response => {
-			if(response.error){
-				if(response.error.type === "wasm"){
-					alert("Segmentation fault (core dumped)")
-				}else{
-					alert("Could not convert file")
-				}
-			}else if(response.url){
-				if(audio.src){
-					URL.revokeObjectURL(audio.src)
-				}
-				audio.src = response.url
-				audio.style.display = ""
-				hint.style.display = "none"
-			}
-		})
+		convertFile(file).then(insertAudio)
 	}
+})
+input.addEventListener("change", event => {
+	var file = input.files[0]
+	if(file){
+		convertFile(file).then(insertAudio)
+	}
+})
+download.addEventListener("click", event => {
+	var link = document.createElement("a")
+	link.href = audio.src
+	if("download" in HTMLAnchorElement.prototype){
+		link.download = dlfilename
+	}else{
+		link.target = "_blank"
+	}
+	link.innerText = "."
+	link.style.opacity = "0"
+	document.body.appendChild(link)
+	setTimeout(() => {
+		link.click()
+		document.body.removeChild(link)
+	})
 })
 </script>
 </body>
