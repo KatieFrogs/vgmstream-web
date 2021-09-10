@@ -85,7 +85,7 @@ async function convertFile(file){
 function insertAudio(response){
 	if(response.error){
 		if(response.error.type === "wasm"){
-			alert("Segmentation fault (core dumped)")
+			alert("The WebAssembly application crashed while decoding this file")
 		}else{
 			alert("Could not convert file: " + response.stderr.trim())
 		}
@@ -96,8 +96,42 @@ function insertAudio(response){
 		audio.src = response.url
 		dlfilename = response.outputFilename
 		filenamebox.innerText = response.inputFilename
-		log.innerText = response.stdout.trim()
+		var logMessage = (response.stdout.trim() + "\n" + response.stderr.trim()).trim()
+		logTable(log, logMessage)
 		audiobox.style.display = "block"
+	}
+}
+
+function logTable(log, logMessage){
+	var tableRegex = /(?:.+?: .*?(?:\n|$))+/g
+	var index = 0
+	while((matches = tableRegex.exec(logMessage)) !== null){
+		if(matches.index === tableRegex.lastIndex){
+			tableRegex.lastIndex++
+		}
+		if(index < matches.index){
+			var div = document.createElement("div")
+			div.innerText = logMessage.slice(index, matches.index)
+			log.appendChild(div)
+		}
+		var table = document.createElement("table")
+		matches.forEach(match => {
+			match.split("\n").forEach(line => {
+				if(line){
+					var colon = line.indexOf(": ")
+					var tr = document.createElement("tr")
+					var th = document.createElement("th")
+					th.innerText = colon !== -1 ? line.slice(0, colon + 1) : ""
+					tr.appendChild(th)
+					var td = document.createElement("td")
+					td.innerText = colon !== -1 ? line.slice(colon + 2) : line
+					tr.appendChild(td)
+					table.appendChild(tr)
+				}
+			})
+		})
+		log.appendChild(table)
+		index = tableRegex.lastIndex
 	}
 }
 

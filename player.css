@@ -16,7 +16,7 @@ header{
 main{
 	position: relative;
 	width: 600px;
-	padding: 0 50px 80px 50px;
+	padding: 0 min(50px, 5vw) 80px;
 	max-width: 100%;
 	min-height: 100vh;
 	margin: auto;
@@ -30,6 +30,7 @@ main{
 	width: 100%;
 	height: 4em;
 	margin: 1em 0;
+	padding: 1em;
 	box-sizing: border-box;
 	background: #dfc;
 	border: 0.1em solid #adb;
@@ -57,12 +58,30 @@ main{
 }
 #log{
 	width: 100%;
-	padding: 5px;
 	border: 0.1em solid #555;
 	background: #fff;
 	box-sizing: border-box;
 	font-family: monospace;
 	font-size: 0.75em;
+	overflow: auto;
+}
+#log table{
+	width: 100%;
+	border-spacing: 0;
+}
+#log>div,
+#log td,
+#log th{
+	padding: 0 5px;
+}
+#log tr{
+	background-color: #e0e0e0;
+}
+#log tr:nth-child(2n){
+	background-color: #eee;
+}
+#log th{
+	text-align: left;
 }
 #fadeoverlay{
 	display: flex;
