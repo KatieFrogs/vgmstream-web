@@ -105,6 +105,7 @@ function insertAudio(response){
 function logTable(log, logMessage){
 	var tableRegex = /(?:.+?: .*?(?:\n|$))+/g
 	var index = 0
+	log.innerText = ""
 	while((matches = tableRegex.exec(logMessage)) !== null){
 		if(matches.index === tableRegex.lastIndex){
 			tableRegex.lastIndex++
