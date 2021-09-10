@@ -4,138 +4,30 @@
 <meta charset="utf-8">
 <title>vgmstream-web</title>
 <meta name="viewport" content="width=device-width">
-<style>
-body{
-	transition: background-color 0.5s;
-	background-color: #fff;
-	font-family: sans-serif;
-	font-size: 20px;
-}
-#input{
-	margin-bottom: 20px;
-}
-#input,
-#download{
-	font-size: 16px;
-}
-#audiobox{
-	display: none;
-}
-#audio{
-	width: 500px;
-	max-width: 100%;
-}
-</style>
+<link rel="stylesheet" href="player.css">
 </head>
 <body>
-<h2>vgmstream-web</h2>
-<div><input type="file" id="input"></div>
-<div id="hint">Select or drop an audio stream file here...</div>
-<div id="audiobox">
-	<div><audio id="audio" controls></audio></div>
-	<div><input id="download" type="button" value="Download"></div>
-</div>
-<script src="vgmstream-cli.js"></script>
-<script>
-var input = document.getElementById("input")
-var hint = document.getElementById("hint")
-var audiobox = document.getElementById("audiobox")
-var audio = document.getElementById("audio")
-var download = document.getElementById("download")
-var dlfilename
-
-async function convertFile(file){
-	var filename = file.name
-	var output = filename + ".wav"
-	var data = new Uint8Array(await file.arrayBuffer())
-	var stream = FS.open(filename, "w+")
-	FS.write(stream, data, 0, data.length, 0)
-	FS.close(stream)
-	try{
-		callMain([filename])
-	}catch(e){
-		return {error: {
-			type: "wasm",
-			stack: e
-		}}
-	}finally{
-		FS.unlink(filename)
-	}
-	try{
-		var wav = FS.open(output, "r")
-	}catch(e){
-		return {error: {
-			type: "unsupported",
-			stack: e
-		}}
-	}
-	var wavdata = new Uint8Array(wav.node.usedBytes)
-	FS.read(wav, wavdata, 0, wav.node.usedBytes, 0)
-	FS.close(wav)
-	FS.unlink(output)
-	return {
-		filename: output,
-		url: URL.createObjectURL(new Blob([wavdata], {
-			type: "audio/x-wav"
-		}))
-	}
-}
-function insertAudio(response){
-	if(response.error){
-		if(response.error.type === "wasm"){
-			alert("Segmentation fault (core dumped)")
-		}else{
-			alert("Could not convert file")
-		}
-	}else if(response.url){
-		if(audio.src){
-			URL.revokeObjectURL(audio.src)
-		}
-		audio.src = response.url
-		audiobox.style.display = "block"
-		hint.style.display = "none"
-		dlfilename = response.filename
-	}
-}
-
-document.addEventListener("dragover", event => {
-	event.preventDefault()
-	event.dataTransfer.dropEffect = "copy"
-	document.body.style.backgroundColor = "#ccc"
-})
-document.addEventListener("dragleave", () => {
-	document.body.style.backgroundColor = "#fff"
-})
-document.addEventListener("drop", event => {
-	document.body.style.backgroundColor = "#fff"
-	event.preventDefault()
-	var file = event.dataTransfer.files[0]
-	if(file){
-		convertFile(file).then(insertAudio)
-	}
-})
-input.addEventListener("change", event => {
-	var file = input.files[0]
-	if(file){
-		convertFile(file).then(insertAudio)
-	}
-})
-download.addEventListener("click", event => {
-	var link = document.createElement("a")
-	link.href = audio.src
-	if("download" in HTMLAnchorElement.prototype){
-		link.download = dlfilename
-	}else{
-		link.target = "_blank"
-	}
-	link.innerText = "."
-	link.style.opacity = "0"
-	document.body.appendChild(link)
-	setTimeout(() => {
-		link.click()
-		document.body.removeChild(link)
-	})
-})
-</script>
+<main>
+	<header><h2>vgmstream-web</h2></header>
+	<input type="file" id="input">
+	<div id="selectbtn">Select or drop an audio stream file here...</div>
+	<div id="audiobox">
+		<div id="filenamebox"></div>
+		<div><audio id="audio" controls></audio></div>
+		<div><input id="download" type="button" value="Download"></div>
+		<div id="logbox">
+			vgmstream output:
+			<div id="log"></div>
+		</div>
+	</div>
+</main>
+<footer>
+	<ul>
+		<li><a href="https://github.com/vgmstream/vgmstream">vgmstream</a></li>
+		<li><a href="https://github.com/LoveEevee">LoveEevee</a></li>
+	</ul>
+</footer>
+<div id="fadeoverlay">...</div>
+<script src="player.js"></script>
 </body>
 </html>
