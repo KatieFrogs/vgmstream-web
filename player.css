@@ -37,6 +37,7 @@ main{
 	color: #250;
 	cursor: pointer;
 	border-radius: 10px;
+	font-size: inherit;
 }
 #selectbtn:hover{
 	background: #efd;

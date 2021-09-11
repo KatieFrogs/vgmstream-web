@@ -10,6 +10,7 @@ var dlfilename
 
 class WorkerWrapper{
 	constructor(url){
+		this.symbol = 0
 		this.allEvents = new Map()
 		this.worker = new Worker(url)
 		this.worker.addEventListener("message", event => this.messageEvent(event.data))
@@ -26,8 +27,10 @@ class WorkerWrapper{
 	send(subject, content){
 		return this.load().then(() => {
 			return new Promise((resolve, reject) => {
-				this.on(subject).then(resolve, reject)
+				var symbol = ++this.symbol
+				this.on(symbol).then(resolve, reject)
 				return this.worker.postMessage({
+					symbol: symbol,
 					subject: subject,
 					content: content
 				})
@@ -35,7 +38,7 @@ class WorkerWrapper{
 		})
 	}
 	messageEvent(data){
-		var addedType = this.allEvents.get(data.subject)
+		var addedType = this.allEvents.get(data.symbol || data.subject)
 		if(addedType){
 			addedType.forEach(callback => {
 				if(data.error){
@@ -94,6 +97,20 @@ function insertAudio(response){
 			URL.revokeObjectURL(audio.src)
 		}
 		audio.src = response.url
+		var sampleRate = response.stdout.match(/sample rate: (\d+) Hz/)
+		var startSamples = response.stdout.match(/loop start: (\d+) samples/)
+		var endSamples = response.stdout.match(/loop end: (\d+) samples/)
+		audio.loop = false
+		if(sampleRate && startSamples){
+			var hz = parseFloat(sampleRate[1])
+			if(hz > 0){
+				audio.loop = true
+				audio.loopStart = (startSamples[1] || 0) / hz
+				if(endSamples){
+					audio.loopEnd = (endSamples[1] || 0) / hz
+				}
+			}
+		}
 		dlfilename = response.outputFilename
 		filenamebox.innerText = response.inputFilename
 		var logMessage = (response.stdout.trim() + "\n" + response.stderr.trim()).trim()

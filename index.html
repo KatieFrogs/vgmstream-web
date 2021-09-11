@@ -10,10 +10,10 @@
 <main>
 	<header><h2>vgmstream-web</h2></header>
 	<input type="file" id="input">
-	<div id="selectbtn">Select or drop an audio stream file here...</div>
+	<button id="selectbtn">Select or drop an audio stream file here...</button>
 	<div id="audiobox">
 		<div id="filenamebox"></div>
-		<div><audio id="audio" controls></audio></div>
+		<div><custom-audio id="audio" controls></custom-audio></div>
 		<div><input id="download" type="button" value="Download"></div>
 		<div id="logbox">
 			vgmstream output:
@@ -28,6 +28,8 @@
 	</ul>
 </footer>
 <div id="fadeoverlay">...</div>
+<script src="soundbuffer.js"></script>
+<script src="custom-audio.js"></script>
 <script src="player.js"></script>
 </body>
 </html>

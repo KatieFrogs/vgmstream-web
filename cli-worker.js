@@ -14,6 +14,7 @@ async function messageEvent(data){
 		error = e
 	}
 	return postMessage({
+		symbol: data.symbol,
 		subject: data.subject,
 		error: error,
 		content: content
@@ -30,7 +31,7 @@ async function convertFile(file){
 	stdoutBuffer = ""
 	stderrBuffer = ""
 	try{
-		callMain([inputFilename])
+		callMain(["-i", inputFilename])
 	}catch(e){
 		return {
 			error: {
