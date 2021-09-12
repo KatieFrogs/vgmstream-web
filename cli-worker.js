@@ -111,12 +111,14 @@ function stderrCopy(){
 var stdoutBuffer = ""
 var stderrBuffer = ""
 var Module = {
-	preRun: () =>
+	preRun: () => {
 		FS.init(undefined, code => {
 			stdoutBuffer += String.fromCharCode(code)
 		}, code => {
 			stderrBuffer += String.fromCharCode(code)
 		})
+	},
+	noInitialRun: true
 }
 addEventListener("message", event => messageEvent(event.data))
 loadCli()

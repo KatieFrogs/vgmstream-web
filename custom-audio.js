@@ -400,7 +400,7 @@ class CustomAudio extends HTMLElement{
 		
 	}
 	#onKey(event){
-		if(event.defaultPrevented){
+		if(event.defaultPrevented || !this.#loaded){
 			return
 		}
 		var capture = false
