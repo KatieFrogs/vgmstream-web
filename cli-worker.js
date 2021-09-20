@@ -1,23 +1,36 @@
 async function messageEvent(data){
-	var content = data.content
+	var input = data.content
+	var output
 	var error
 	try{
 		switch(data.subject){
 			case "convertFile":
-				content = await convertFile(content)
+				output = await convertFile(...input)
+				break
+			case "vgmstream":
+				output = vgmstream(...input)
+				break
+			case "writeFile":
+				output = writeFile(...input)
+				break
+			case "readFile":
+				output = readFile(...input)
+				break
+			case "deleteFile":
+				output = deleteFile(...input)
 				break
 			default:
 				error = new Error("Unknown message subject")
 				break
 		}
 	}catch(e){
-		error = e
+		error = cleanError(e)
 	}
 	return postMessage({
 		symbol: data.symbol,
 		subject: data.subject,
 		error: error,
-		content: content
+		content: output
 	})
 }
 
@@ -25,50 +38,74 @@ async function convertFile(file){
 	var inputFilename = file.name
 	var outputFilename = inputFilename + ".wav"
 	var data = new Uint8Array(await file.arrayBuffer())
-	var stream = FS.open(inputFilename, "w+")
-	FS.write(stream, data, 0, data.length, 0)
-	FS.close(stream)
+	writeFile(inputFilename, data)
 	stdoutBuffer = ""
 	stderrBuffer = ""
-	try{
-		callMain(["-i", inputFilename])
-	}catch(e){
-		return {
-			error: {
-				type: "wasm",
-				stack: cleanError(e)
-			},
-			stdout: stdoutCopy(),
-			stderr: stderrCopy()
-		}
-	}finally{
-		FS.unlink(inputFilename)
+	var output = vgmstream("-i", inputFilename)
+	deleteFile(inputFilename)
+	if(output.error){
+		return output
 	}
+	var wavdata = readFile(outputFilename)
+	if(!wavdata){
+		output.error = {
+			type: "unsupported"
+		}
+		return output
+	}
+	deleteFile(outputFilename)
+	output.inputFilename = inputFilename
+	output.outputFilename = outputFilename
+	output.url = URL.createObjectURL(new Blob([wavdata], {
+		type: "audio/x-wav"
+	}))
+	return output
+}
+
+function writeFile(name, data){
+	var stream = FS.open(name, "w+")
+	FS.write(stream, data, 0, data.length, 0)
+	FS.close(stream)
+}
+
+function readFile(name){
 	try{
-		var wav = FS.open(outputFilename, "r")
+		var file = FS.open(name, "r")
 	}catch(e){
-		return {
-			error: {
-				type: "unsupported",
-				stack: cleanError(e)
-			},
-			stdout: stdoutCopy(),
-			stderr: stderrCopy()
+		return null
+	}
+	var data = new Uint8Array(file.node.usedBytes)
+	FS.read(file, data, 0, file.node.usedBytes, 0)
+	FS.close(file)
+	return data
+}
+
+function deleteFile(name){
+	try{
+		FS.unlink(name)
+	}catch(e){}
+}
+
+function vgmstream(...args){
+	stdoutBuffer = ""
+	stderrBuffer = ""
+	var error
+	try{
+		callMain(args)
+	}catch(e){
+		error = {
+			type: "wasm",
+			stack: cleanError(e)
 		}
 	}
-	var wavdata = new Uint8Array(wav.node.usedBytes)
-	FS.read(wav, wavdata, 0, wav.node.usedBytes, 0)
-	FS.close(wav)
-	FS.unlink(outputFilename)
-	return {
-		inputFilename: inputFilename,
-		outputFilename: outputFilename,
-		url: URL.createObjectURL(new Blob([wavdata], {
-			type: "audio/x-wav"
-		})),
+	var output = {
 		stdout: stdoutCopy(),
 		stderr: stderrCopy()
 	}
+	if(error){
+		output.error = error
+	}
+	return output
 }
 
 async function loadCli(){

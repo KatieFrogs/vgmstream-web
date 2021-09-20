@@ -7,6 +7,7 @@ var download = document.getElementById("download")
 var log = document.getElementById("log")
 var fadeoverlay = document.getElementById("fadeoverlay")
 var dlfilename
+var noConverting
 
 class WorkerWrapper{
 	constructor(url){
@@ -24,7 +25,7 @@ class WorkerWrapper{
 			alert(error)
 		})
 	}
-	send(subject, content){
+	send(subject, ...content){
 		return this.load().then(() => {
 			return new Promise((resolve, reject) => {
 				var symbol = ++this.symbol
@@ -74,6 +75,22 @@ class WorkerWrapper{
 	}
 }
 var cliWorker = new WorkerWrapper("cli-worker.js")
+
+function vgmstream(...args){
+	return cliWorker.send("vgmstream", ...args)
+}
+
+function writeFile(name, data){
+	return cliWorker.send("writeFile", name, data)
+}
+
+function readFile(name){
+	return cliWorker.send("readFile", name)
+}
+
+function deleteFile(name){
+	return cliWorker.send("deleteFile", name)
+}
 
 async function convertFile(file){
 	fade(1, true)
@@ -176,13 +193,13 @@ document.addEventListener("drop", event => {
 	fade(0)
 	event.preventDefault()
 	var file = event.dataTransfer.files[0]
-	if(file){
+	if(file && !noConverting){
 		convertFile(file).then(insertAudio)
 	}
 })
 input.addEventListener("change", event => {
 	var file = input.files[0]
-	if(file){
+	if(file && !noConverting){
 		convertFile(file).then(insertAudio)
 	}
 })
