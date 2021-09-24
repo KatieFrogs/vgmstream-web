@@ -23,11 +23,15 @@ main{
 	background-color: #f7f7f7;
 	box-sizing: border-box;
 }
-#input{
+#browse,
+#browsedir{
 	display: none;
 }
-#selectbtn{
-	width: 100%;
+#buttons{
+	display: flex;
+	gap: 0.5em;
+}
+.greenbutton{
 	height: 4em;
 	margin: 1em 0;
 	padding: 1em;
@@ -39,17 +43,34 @@ main{
 	border-radius: 10px;
 	font-size: inherit;
 }
-#selectbtn:hover{
+.greenbutton:hover{
 	background: #efd;
 	color: #472;
 }
+#selectbtn{
+	width: 100%;
+}
+#selectdirbtn{
+	display: none;
+	width: 5em;
+}
+#dirselectbtn,
 #download{
 	font-size: 0.8em;
 	padding: 0.3em;
 }
+#directorybox,
 #audiobox{
 	display: none;
 	width: 100%;
+}
+#dirselect{
+	width: 100%;
+	max-height: 50vh;
+	font-size: 15px;
+}
+#dirselect option{
+	padding: 0.4em;
 }
 #audio{
 	width: 100%;

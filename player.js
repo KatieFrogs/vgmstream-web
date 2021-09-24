@@ -1,5 +1,9 @@
-var input = document.getElementById("input")
+var browse = document.getElementById("browse")
+var browsedir = document.getElementById("browsedir")
 var selectbtn = document.getElementById("selectbtn")
+var selectdirbtn = document.getElementById("selectdirbtn")
+var directorybox = document.getElementById("directorybox")
+var dirselect = document.getElementById("dirselect")
 var audiobox = document.getElementById("audiobox")
 var filenamebox = document.getElementById("filenamebox")
 var audio = document.getElementById("audio")
@@ -8,6 +12,12 @@ var log = document.getElementById("log")
 var fadeoverlay = document.getElementById("fadeoverlay")
 var dlfilename
 var noConverting
+var dirPromise
+
+var canPickDir = (typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype) && !(/Android|iPhone|iPad/.test(navigator.userAgent))
+if(canPickDir){
+	selectdirbtn.style.display = "block"
+}
 
 class WorkerWrapper{
 	constructor(url){
@@ -92,10 +102,14 @@ function deleteFile(name){
 	return cliWorker.send("deleteFile", name)
 }
 
-async function convertFile(file){
+function convertFile(file){
+	return convertDir([file], file.name)
+}
+
+async function convertDir(files, inputFilename){
 	fade(1, true)
 	try{
-		var response = await cliWorker.send("convertFile", file)
+		var response = await cliWorker.send("convertDir", files, inputFilename)
 	}finally{
 		fade(0)
 	}
@@ -103,11 +117,16 @@ async function convertFile(file){
 }
 
 function insertAudio(response){
-	if(response.error){
-		if(response.error.type === "wasm"){
+	var wfs = "/workerfs/"
+	if(!response || response.error){
+		if(!response){
+			throw new Error()
+		}else if(response.error.type === "wasm"){
 			alert("The WebAssembly application crashed while decoding this file")
+		}else if(response.stderr){
+			alert("Could not convert file: " + response.stderr.replaceAll(wfs, "").trim())
 		}else{
-			alert("Could not convert file: " + response.stderr.trim())
+			throw new Error(response.error)
 		}
 	}else if(response.url){
 		if(audio.src){
@@ -130,7 +149,9 @@ function insertAudio(response){
 		}
 		dlfilename = response.outputFilename
 		filenamebox.innerText = response.inputFilename
-		var logMessage = (response.stdout.trim() + "\n" + response.stderr.trim()).trim()
+		var stdout = response.stdout.replaceAll(wfs, "").trim()
+		var stderr = response.stderr.replaceAll(wfs, "").trim()
+		var logMessage = (stdout + "\n" + stderr).trim()
 		logTable(log, logMessage)
 		audiobox.style.display = "block"
 	}
@@ -181,6 +202,116 @@ function fade(opacity, modal){
 	}
 }
 
+async function walkEntry(entry, path="", output=[]){
+	await new Promise(async resolve => {
+		if(entry.isFile){
+			entry.file(file => {
+				output.push(new File([file], path + file.name))
+				return resolve()
+			}, resolve)
+		}else if(entry.isDirectory){
+			var dirReader = entry.createReader()
+			dirReader.readEntries(async entries => {
+				var dirPromises = []
+				for(var i = 0; i < entries.length; i++){
+					dirPromises.push(walkEntry(entries[i], path + entry.name + "/", output))
+				}
+				await Promise.all(dirPromises)
+				return resolve()
+			}, resolve)
+		}else{
+			return resolve()
+		}
+	})
+	return output
+}
+
+async function walkFilesystem(file, top, path="", output=[]){
+	await filePermission(file)
+	if(file.kind === "directory"){
+		for await(let subfile of file.values()){
+			await walkFilesystem(subfile, false, top ? "" : path + file.name + "/", output)
+		}
+	}else{
+		output.push(new File([await file.getFile()], path + file.name))
+	}
+	return output
+}
+
+async function filePermission(file){
+	if(await file.queryPermission() !== "granted"){
+		if(await file.requestPermission() !== "granted"){
+			throw new Error("File permission denied")
+		}
+	}
+}
+
+async function displayFiles(files){
+	var inputFilename = await selectFile(files)
+	if(inputFilename){
+		insertAudio(await convertDir(files, inputFilename))
+	}
+}
+
+async function selectFile(files){
+	if(files.length === 0){
+		return
+	}else if(files.length === 1){
+		return files[0].name
+	}
+	
+	var audioStyle = audiobox.style.display
+	audiobox.style.display = ""
+	directorybox.style.display = "block"
+	dirselect.innerText = ""
+	
+	var dir = []
+	for(var i = 0; i < files.length; i++){
+		dir.push(files[i])
+	}
+	dir = dir.map(file => file.name).sort()
+	dir.forEach(name => {
+		var option = document.createElement("option")
+		option.value = name
+		option.innerText = name
+		dirselect.appendChild(option)
+	})
+	dirselect.size = Math.max(2, Math.min(20, dir.length))
+	dirselect.focus()
+	
+	var fileSelected
+	var file = await new Promise(resolve => {
+		dirPromise = resolve
+		fileSelected = event => {
+			if(event.type = "submit"){
+				event.preventDefault()
+			}
+			if(dirselect.value){
+				resolve(dirselect.value)
+			}
+		}
+		dirselect.form.addEventListener("submit", fileSelected)
+		dirselect.addEventListener("dblclick", fileSelected)
+	})
+	
+	dirPromise = null
+	dirselect.form.removeEventListener("submit", fileSelected)
+	dirselect.removeEventListener("dblclick", fileSelected)
+	directorybox.style.display = ""
+	audiobox.style.display = audioStyle
+	
+	if(file){
+		return file
+	}
+}
+
+function cleanup(){
+	audio.pause()
+	if(dirPromise){
+		dirPromise()
+	}
+}
+
 document.addEventListener("dragover", event => {
 	event.preventDefault()
 	event.dataTransfer.dropEffect = "copy"
@@ -189,22 +320,76 @@ document.addEventListener("dragover", event => {
 document.addEventListener("dragleave", () => {
 	fade(0)
 })
-document.addEventListener("drop", event => {
+document.addEventListener("drop", async event => {
+	cleanup()
 	fade(0)
 	event.preventDefault()
-	var file = event.dataTransfer.files[0]
-	if(file && !noConverting){
-		convertFile(file).then(insertAudio)
+	var items = event.dataTransfer.items
+	if(!noConverting){
+		var fileSystem = location.protocol === "https:" && DataTransferItem.prototype.getAsFileSystemHandle
+		var files = []
+		var dropPromises = []
+		for(var i = 0; i < items.length; i++){
+			let promise
+			if(this.fileSystem){
+				promise = item.getAsFileSystemHandle().then(file => walkFilesystem(file))
+			}else{
+				var entry = items[i].webkitGetAsEntry()
+				if(entry){
+					promise = walkEntry(entry)
+				}
+			}
+			if(promise){
+				dropPromises.push(promise.then(filelist => {
+					files = files.concat(filelist)
+				}))
+			}
+		}
+		await Promise.all(dropPromises)
+		displayFiles(files)
 	}
 })
-input.addEventListener("change", event => {
-	var file = input.files[0]
-	if(file && !noConverting){
-		convertFile(file).then(insertAudio)
+browse.addEventListener("change", async event => {
+	cleanup()
+	var files = browse.files
+	if(!noConverting){
+		displayFiles(files)
+	}
+})
+browsedir.addEventListener("change", async event => {
+	cleanup()
+	if(!noConverting){
+		var files = []
+		for(var i = 0; i < browsedir.files.length; i++){
+			var file = browsedir.files[i]
+			var path = file.webkitRelativePath
+			var index = path.indexOf("/")
+			if(index !== -1){
+				path = path.slice(index + 1)
+			}
+			files.push(new File([file], path))
+		}
+		displayFiles(files)
 	}
 })
 selectbtn.addEventListener("click", event => {
-	input.click()
+	browse.click()
+})
+selectdirbtn.addEventListener("click", async event => {
+	if(typeof showDirectoryPicker === "function"){
+		try{
+			var file = await showDirectoryPicker()
+		}catch(e){
+			return
+		}
+		cleanup()
+		if(!noConverting){
+			var files = await walkFilesystem(file, true)
+			displayFiles(files)
+		}
+	}else{
+		browsedir.click()
+	}
 })
 download.addEventListener("click", event => {
 	var link = document.createElement("a")

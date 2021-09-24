@@ -4,8 +4,8 @@ async function messageEvent(data){
 	var error
 	try{
 		switch(data.subject){
-			case "convertFile":
-				output = await convertFile(...input)
+			case "convertDir":
+				output = await convertDir(...input)
 				break
 			case "vgmstream":
 				output = vgmstream(...input)
@@ -34,15 +34,16 @@ async function messageEvent(data){
 	})
 }
 
-async function convertFile(file){
-	var inputFilename = file.name
-	var outputFilename = inputFilename + ".wav"
-	var data = new Uint8Array(await file.arrayBuffer())
-	writeFile(inputFilename, data)
-	stdoutBuffer = ""
-	stderrBuffer = ""
-	var output = vgmstream("-i", inputFilename)
-	deleteFile(inputFilename)
+async function convertDir(dir, inputFilename){
+	var wfs = "/workerfs"
+	var outputFilename = "/output.wav"
+	FS.mkdir(wfs)
+	FS.mount(WORKERFS, {
+		files: dir
+	}, wfs)
+	var output = vgmstream("-o", outputFilename, "-i", wfs + "/" + inputFilename)
+	FS.unmount(wfs)
+	FS.rmdir(wfs)
 	if(output.error){
 		return output
 	}
@@ -55,7 +56,7 @@ async function convertFile(file){
 	}
 	deleteFile(outputFilename)
 	output.inputFilename = inputFilename
-	output.outputFilename = outputFilename
+	output.outputFilename = inputFilename + ".wav"
 	output.url = URL.createObjectURL(new Blob([wavdata], {
 		type: "audio/x-wav"
 	}))
@@ -99,9 +100,11 @@ function vgmstream(...args){
 		}
 	}
 	var output = {
-		stdout: stdoutCopy(),
-		stderr: stderrCopy()
+		stdout: stdoutBuffer,
+		stderr: stderrBuffer
 	}
+	stdoutBuffer = ""
+	stderrBuffer = ""
 	if(error){
 		output.error = error
 	}
@@ -126,23 +129,13 @@ async function loadCli(){
 }
 
 function cleanError(error){
+	var output = {}
 	for(var i in error){
-		if(typeof error[i] === "function"){
-			delete error[i]
+		if(typeof error[i] === "string"){
+			output[i] = error[i]
 		}
 	}
-}
-
-function stdoutCopy(){
-	var stdout = stdoutBuffer
-	stdoutBuffer = ""
-	return stdout
-}
-
-function stderrCopy(){
-	var stderr = stderrBuffer
-	stderrBuffer = ""
-	return stderr
+	return output
 }
 
 var stdoutBuffer = ""
@@ -150,9 +143,13 @@ var stderrBuffer = ""
 var Module = {
 	preRun: () => {
 		FS.init(undefined, code => {
-			stdoutBuffer += String.fromCharCode(code)
+			if(code !== null){
+				stdoutBuffer += String.fromCharCode(code)
+			}
 		}, code => {
-			stderrBuffer += String.fromCharCode(code)
+			if(code !== null){
+				stderrBuffer += String.fromCharCode(code)
+			}
 		})
 	},
 	noInitialRun: true

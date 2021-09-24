@@ -9,8 +9,18 @@
 <body>
 <main>
 	<header><h2>vgmstream-web</h2></header>
-	<input type="file" id="input">
-	<button id="selectbtn">Select or drop an audio stream file here...</button>
+	<input type="file" multiple id="browse">
+	<input type="file" webkitdirectory id="browsedir">
+	<div id="buttons">
+		<button class="greenbutton" id="selectbtn">Select or drop an audio stream file here...</button>
+		<button class="greenbutton" id="selectdirbtn">Folder</button>
+	</div>
+	<div id="directorybox">
+		<form>
+			<select id="dirselect" size="2"></select>
+			<div><input id="dirselectbtn" type="submit" value="Select"></div>
+		</form>
+	</div>
 	<div id="audiobox">
 		<div id="filenamebox"></div>
 		<div><custom-audio id="audio" controls></custom-audio></div>
