@@ -7,6 +7,8 @@
 <meta name="description" content="Listen to streamed video game audio files in your browser">
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="stylesheet" href="player.css">
+<link rel="stylesheet" href="player-dark.css" media="(prefers-color-scheme: dark)">
+<script src="dark-toggle.js"></script>
 </head>
 <body>
 <main>
@@ -20,13 +22,13 @@
 	<div id="directorybox">
 		<form>
 			<select id="dirselect" size="2"></select>
-			<div><input id="dirselectbtn" type="submit" value="Select"></div>
+			<div><input id="dirselectbtn" class="button" type="submit" value="Select"></div>
 		</form>
 	</div>
 	<div id="audiobox">
 		<div id="filenamebox"></div>
 		<div><custom-audio id="audio" controls></custom-audio></div>
-		<div><input id="download" type="button" value="Download"></div>
+		<div><input id="download" class="button" type="button" value="Download"></div>
 		<div id="logbox">
 			vgmstream output:
 			<div id="log"></div>
@@ -37,6 +39,10 @@
 	<ul>
 		<li><a href="https://github.com/vgmstream/vgmstream">vgmstream</a></li>
 		<li><a href="https://github.com/KatieFrogs">Katie Frogs</a></li>
+		<li>
+			<a id="darktoggle" tabindex="0">Dark theme</a>
+			<a id="darkreset" tabindex="0" title="Reset">(x)</a>
+		</li>
 	</ul>
 </footer>
 <div id="fadeoverlay">...</div>

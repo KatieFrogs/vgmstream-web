@@ -1,4 +1,6 @@
 body{
+	background-color: #fff;
+	color: #000;
 	font-family: sans-serif;
 	font-size: 20px;
 	margin: 0;
@@ -36,7 +38,7 @@ main{
 	margin: 1em 0;
 	padding: 1em;
 	box-sizing: border-box;
-	background: #dfc;
+	background-color: #dfc;
 	border: 0.1em solid #adb;
 	color: #250;
 	cursor: pointer;
@@ -44,7 +46,7 @@ main{
 	font-size: inherit;
 }
 .greenbutton:hover{
-	background: #efd;
+	background-color: #efd;
 	color: #472;
 }
 #selectbtn{
@@ -54,8 +56,7 @@ main{
 	display: none;
 	width: 5em;
 }
-#dirselectbtn,
-#download{
+.button{
 	font-size: 0.8em;
 	padding: 0.3em;
 }
@@ -81,7 +82,7 @@ main{
 #log{
 	width: 100%;
 	border: 0.1em solid #555;
-	background: #fff;
+	background-color: #fff;
 	box-sizing: border-box;
 	font-family: monospace;
 	font-size: 0.75em;
@@ -113,7 +114,7 @@ main{
 	bottom: 0;
 	left: 0;
 	opacity: 0;
-	background: rgba(0, 0, 0, 0.5);
+	background-color: rgba(0, 0, 0, 0.5);
 	color: transparent;
 	transition: opacity 0.5s, color 0.5s;
 	align-items: center;
@@ -124,11 +125,15 @@ main{
 	pointer-events: none;
 	user-select: none;
 }
+#fadeoverlay.modal{
+	pointer-events: auto;
+	color: #fff;
+}
 footer{
 	position: relative;
 	margin-top: -50px;
 	padding: 1em 3em;
-	background: #eee;
+	background-color: #eee;
 	font-size: 0.8em;
 	width: 100%;
 	box-sizing: border-box;
@@ -138,6 +143,10 @@ footer ul{
 	padding: 0;
 	display: inline-flex;
 	gap: 30px;
+	flex-wrap: wrap;
+}
+footer li{
+	white-space: nowrap;
 }
 footer li:first-child{
 	list-style: none;
@@ -146,8 +155,13 @@ footer a{
 	color: #373;
 	padding: 1em 0;
 	text-decoration: none;
+	cursor: pointer;
 }
 footer a:hover{
 	color: #000;
 	text-decoration: underline;
+}
+#darkreset{
+	display: none;
+	opacity: 0.5;
 }

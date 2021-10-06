@@ -1,0 +1,44 @@
+body{
+	background-color: #000;
+	color: #fff;
+}
+main{
+	background-color: #0d1117;
+}
+footer{
+	background-color: #06070a;
+}
+.greenbutton{
+	background-color: #250;
+	color: #dfc;
+	border-color: #575;
+}
+.greenbutton:hover{
+	background-color: #360;
+	color: #ffe;
+}
+footer a{
+	color: #494;
+}
+footer a:hover{
+	color: #8d8;
+}
+#fadeoverlay{
+	background-color: rgba(255, 255, 255, 0.5);
+}
+#fadeoverlay.modal{
+	color: #000;
+}
+#audio::part(player){
+	background-color: #000;
+	color: #fff;
+}
+#log{
+	background-color: #000;
+}
+#log tr{
+	background-color: #08080a;
+}
+#log tr:nth-child(2n){
+	background-color: #121218;
+}

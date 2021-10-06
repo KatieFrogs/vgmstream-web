@@ -194,11 +194,9 @@ function logTable(log, logMessage){
 function fade(opacity, modal){
 	fadeoverlay.style.opacity = opacity
 	if(modal){
-		fadeoverlay.style.pointerEvents = "auto"
-		fadeoverlay.style.color = "#fff"
+		fadeoverlay.classList.add("modal")
 	}else{
-		fadeoverlay.style.pointerEvents = ""
-		fadeoverlay.style.color = ""
+		fadeoverlay.classList.remove("modal")
 	}
 }
 
