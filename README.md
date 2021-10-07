@@ -6,6 +6,9 @@ https://katiefrogs.github.io/vgmstream-web/
 ## Compiling vgmstream-cli.js/.wasm
 These instructions have been tested on Ubuntu 21.04, but should also work on other Linux distros.
 ```sh
+# Install packages
+sudo apt install git cmake make
+
 # Get Emscripten SDK
 git clone https://github.com/emscripten-core/emsdk
 cd emsdk

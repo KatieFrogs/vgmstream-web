@@ -24,7 +24,7 @@ footer a:hover{
 	color: #8d8;
 }
 #fadeoverlay{
-	background-color: rgba(255, 255, 255, 0.5);
+	background-color: rgba(127, 127, 127, 0.5);
 }
 #fadeoverlay.modal{
 	color: #000;

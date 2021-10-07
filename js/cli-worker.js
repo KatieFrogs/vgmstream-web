@@ -1,3 +1,5 @@
+var wasmDir = "../vgmstream/"
+
 async function messageEvent(data){
 	var input = data.content
 	var output
@@ -113,7 +115,7 @@ function vgmstream(...args){
 
 async function loadCli(){
 	try{
-		(0, eval)(await (await fetch("vgmstream-cli.js")).text())
+		(0, eval)(await (await fetch(wasmDir + "vgmstream-cli.js")).text())
 	}catch(e){
 		return postMessage({
 			subject: "load",
@@ -152,7 +154,8 @@ var Module = {
 			}
 		})
 	},
-	noInitialRun: true
+	noInitialRun: true,
+	locateFile: name => wasmDir + name
 }
 addEventListener("message", event => messageEvent(event.data))
 loadCli()

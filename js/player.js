@@ -10,6 +10,8 @@ var audio = document.getElementById("audio")
 var download = document.getElementById("download")
 var log = document.getElementById("log")
 var fadeoverlay = document.getElementById("fadeoverlay")
+
+var jsDir = "js/"
 var dlfilename
 var noConverting
 var dirPromise
@@ -84,7 +86,7 @@ class WorkerWrapper{
 		})
 	}
 }
-var cliWorker = new WorkerWrapper("cli-worker.js")
+var cliWorker = new WorkerWrapper(jsDir + "cli-worker.js")
 
 function vgmstream(...args){
 	return cliWorker.send("vgmstream", ...args)
