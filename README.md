@@ -1,5 +1,5 @@
 ## vgmstream-web
-Brings [vgmstream](https://vgmstream.org/) to web browsers. Supports seamlessly looping music playback from various video game audio formats. Powered by WebAssembly, it supports any platform with a web browser, like a desktop, mobile device, or video game console.
+Brings [vgmstream](https://vgmstream.org/) to web browsers. vgmstream-web is a video game audio player that supports seamlessly looping music playback with various exotic audio formats. Powered by WebAssembly, it supports any platform with a web browser, like a desktop, mobile device, or video game console.
 
 https://katiefrogs.github.io/vgmstream-web/
 

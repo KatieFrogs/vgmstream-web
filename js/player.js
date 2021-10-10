@@ -8,6 +8,8 @@ var audiobox = document.getElementById("audiobox")
 var filenamebox = document.getElementById("filenamebox")
 var audio = document.getElementById("audio")
 var download = document.getElementById("download")
+var logbox = document.getElementById("logbox")
+var logdropdown = document.getElementById("logdropdown")
 var log = document.getElementById("log")
 var fadeoverlay = document.getElementById("fadeoverlay")
 
@@ -406,4 +408,15 @@ download.addEventListener("click", event => {
 		link.click()
 		document.body.removeChild(link)
 	})
+})
+logdropdown.addEventListener("mousedown", event => {
+	event.preventDefault()
+})
+logdropdown.addEventListener("click", event => {
+	logbox.classList.toggle("open")
+})
+logdropdown.addEventListener("keydown", event => {
+	if(event.key === "Enter"){
+		logbox.classList.toggle("open")
+	}
 })

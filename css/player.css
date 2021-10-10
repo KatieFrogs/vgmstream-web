@@ -79,7 +79,26 @@ main{
 #logbox{
 	margin-top: 20px;
 }
+#logdropdown{
+	display: inline-block;
+	cursor: pointer;
+}
+#logdropdown:hover,
+#logdropdown:focus-visible{
+	text-decoration: underline dotted;
+}
+#logdropdown::before{
+	content: "+";
+	display: inline-block;
+	width: 0.6em;
+	margin-right: 0.4em;
+	text-align: center;
+}
+#logbox.open #logdropdown::before{
+	content: "-";
+}
 #log{
+	display: none;
 	width: 100%;
 	border: 0.1em solid #555;
 	background-color: #fff;
@@ -87,6 +106,9 @@ main{
 	font-family: monospace;
 	font-size: 0.75em;
 	overflow: auto;
+}
+#logbox.open #log{
+	display: block;
 }
 #log table{
 	width: 100%;
