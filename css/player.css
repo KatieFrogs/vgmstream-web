@@ -26,7 +26,8 @@ main{
 	box-sizing: border-box;
 }
 #browse,
-#browsedir{
+#browsedir,
+#wasmwarning{
 	display: none;
 }
 #buttons{
@@ -72,6 +73,10 @@ main{
 }
 #dirselect option{
 	padding: 0.4em;
+}
+#filenamebox,
+#log{
+	overflow-wrap: break-word;
 }
 #audio{
 	width: 100%;

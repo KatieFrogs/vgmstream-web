@@ -2,6 +2,7 @@ var browse = document.getElementById("browse")
 var browsedir = document.getElementById("browsedir")
 var selectbtn = document.getElementById("selectbtn")
 var selectdirbtn = document.getElementById("selectdirbtn")
+var wasmwarning = document.getElementById("wasmwarning")
 var directorybox = document.getElementById("directorybox")
 var dirselect = document.getElementById("dirselect")
 var audiobox = document.getElementById("audiobox")
@@ -21,6 +22,23 @@ var dirPromise
 var canPickDir = (typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype) && !(/Android|iPhone|iPad/.test(navigator.userAgent))
 if(canPickDir){
 	selectdirbtn.style.display = "block"
+}
+
+var wasmSupported = (() => {
+	try{
+		if(typeof WebAssembly === "object" && typeof WebAssembly.instantiate === "function"){
+			var module = new WebAssembly.Module(Uint8Array.of(0, 0x61, 0x73, 0x6d, 0x1, 0, 0, 0))
+			if(module instanceof WebAssembly.Module){
+				return new WebAssembly.Instance(module) instanceof WebAssembly.Instance
+			}
+		}
+	}catch(e){}
+	return false
+})()
+
+if(!wasmSupported){
+	wasmwarning.style.display = "block"
+	noConverting = true
 }
 
 class WorkerWrapper{
@@ -88,7 +106,9 @@ class WorkerWrapper{
 		})
 	}
 }
-var cliWorker = new WorkerWrapper(jsDir + "cli-worker.js")
+if(wasmSupported){
+	var cliWorker = new WorkerWrapper(jsDir + "cli-worker.js")
+}
 
 function vgmstream(...args){
 	return cliWorker.send("vgmstream", ...args)
