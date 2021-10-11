@@ -271,7 +271,7 @@ async function selectFile(files){
 	for(var i = 0; i < files.length; i++){
 		dir.push(files[i])
 	}
-	dir = dir.map(file => file.name).sort()
+	dir = naturalSort(dir.map(file => file.name))
 	dir.forEach(name => {
 		var option = document.createElement("option")
 		option.value = name
@@ -305,6 +305,14 @@ async function selectFile(files){
 	if(file){
 		return file
 	}
+}
+
+function naturalSort(input){
+	var collator = new Intl.Collator(undefined, {
+		numeric: true,
+		sensitivity: "base"
+	})
+	return input.sort(collator.compare)
 }
 
 function cleanup(){
