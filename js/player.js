@@ -18,6 +18,7 @@ var jsDir = "js/"
 var dlfilename
 var noConverting
 var dirPromise
+var locked = false
 
 var canPickDir = (typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype) && !(/Android|iPhone|iPad/.test(navigator.userAgent))
 if(canPickDir){
@@ -108,6 +109,7 @@ class WorkerWrapper{
 }
 if(wasmSupported){
 	var cliWorker = new WorkerWrapper(jsDir + "cli-worker.js")
+	checkHash()
 }
 
 function vgmstream(...args){
@@ -218,8 +220,10 @@ function logTable(log, logMessage){
 function fade(opacity, modal){
 	fadeoverlay.style.opacity = opacity
 	if(modal){
+		locked = true
 		fadeoverlay.classList.add("modal")
 	}else{
+		locked = false
 		fadeoverlay.classList.remove("modal")
 	}
 }
@@ -342,18 +346,105 @@ function cleanup(){
 	}
 }
 
+async function validateUrl(input){
+	var url = new URL(input)
+	if(url.protocol !== "http:" && (url.protocol !== "https:" || location.protocol !== "https:")){
+		throw new Error(input)
+	}
+}
+
+async function checkHash(){
+	locked = true
+	await cliWorker.load()
+	var hash = location.hash.slice(1)
+	if(!hash){
+		locked = false
+		return
+	}
+	fade(1, true)
+	var promises = []
+	var files = []
+	var base = ""
+	var renameLast = () => {}
+	var selectedFiles = []
+	new URL("a:?" + hash).searchParams.forEach((value, name) => {
+		var url = base + value
+		switch(name){
+			case "base":
+				base = value
+				break
+			case "play":
+			case "sub":
+				var path = value
+				if(!base){
+					var path = url
+					var index = path.lastIndexOf("/")
+					if(index !== -1){
+						path = path.slice(index + 1)
+					}
+				}
+				renameLast = newPath => {
+					path = newPath
+				}
+				promises.push(
+					validateUrl(url)
+					.then(() => fetch(url))
+					.then(response => {
+						if(!response.ok){
+							throw new Error(response)
+						}
+						return response.arrayBuffer()
+					})
+					.then(buffer => {
+						files.push(new File([buffer], path))
+						if(name === "play"){
+							selectedFiles.push(path)
+						}
+					})
+				)
+				break
+			case "dir":
+				renameLast(value)
+				break
+		}
+	})
+	try{
+		await Promise.all(promises)
+	}catch(e){
+		console.warn(e)
+		return
+	}finally{
+		fade(0)
+	}
+	cleanup()
+	if(!noConverting){
+		if(selectedFiles.length === 1){
+			insertAudio(await convertDir(files, selectedFiles[0]))
+		}else{
+			displayFiles(files)
+		}
+	}
+}
+
 document.addEventListener("dragover", event => {
 	event.preventDefault()
 	event.dataTransfer.dropEffect = "copy"
-	fade(0.5)
+	if(!locked){
+		fade(0.5)
+	}
 })
 document.addEventListener("dragleave", () => {
-	fade(0)
+	if(!locked){
+		fade(0)
+	}
 })
 document.addEventListener("drop", async event => {
+	event.preventDefault()
+	if(locked){
+		return
+	}
 	cleanup()
 	fade(0)
-	event.preventDefault()
 	var items = event.dataTransfer.items
 	if(!noConverting){
 		var fileSystem = location.protocol === "https:" && DataTransferItem.prototype.getAsFileSystemHandle
@@ -382,13 +473,13 @@ document.addEventListener("drop", async event => {
 browse.addEventListener("change", async event => {
 	cleanup()
 	var files = browse.files
-	if(!noConverting){
+	if(!noConverting && !locked){
 		displayFiles(files)
 	}
 })
 browsedir.addEventListener("change", async event => {
 	cleanup()
-	if(!noConverting){
+	if(!noConverting && !locked){
 		var files = []
 		for(var i = 0; i < browsedir.files.length; i++){
 			var file = browsedir.files[i]
@@ -403,9 +494,14 @@ browsedir.addEventListener("change", async event => {
 	}
 })
 selectbtn.addEventListener("click", event => {
-	browse.click()
+	if(!locked){
+		browse.click()
+	}
 })
 selectdirbtn.addEventListener("click", async event => {
+	if(locked){
+		return
+	}
 	if(typeof showDirectoryPicker === "function"){
 		try{
 			var file = await showDirectoryPicker()
@@ -422,6 +518,9 @@ selectdirbtn.addEventListener("click", async event => {
 	}
 })
 download.addEventListener("click", event => {
+	if(locked){
+		return
+	}
 	var link = document.createElement("a")
 	link.href = audio.src
 	if("download" in HTMLAnchorElement.prototype){
@@ -444,7 +543,7 @@ logdropdown.addEventListener("click", event => {
 	logbox.classList.toggle("open")
 })
 logdropdown.addEventListener("keydown", event => {
-	if(event.key === "Enter"){
+	if(event.key === "Enter" && !locked){
 		logbox.classList.toggle("open")
 	}
 })

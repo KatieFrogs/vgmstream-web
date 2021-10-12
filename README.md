@@ -3,6 +3,22 @@ Brings [vgmstream](https://vgmstream.org/) to web browsers. vgmstream-web is a v
 
 https://katiefrogs.github.io/vgmstream-web/
 
+## URL Arguments
+Arguments to vgmstream-web can be passed by appending, after the number sign (`#`), an ampersand (`&`)-separated `name=value` string.
+
+### Supported arguments
+- `play`: URL from which to load and play the stream.
+- `sub`: Additional file or files that are required for the playback.
+- `base`: Base string that prefixes the following URLs.
+- `dir`: Renames the previous file.
+
+The arguments can be repeated. Value can be URL-encoded.
+
+### Example URL
+`https://katiefrogs.github.io/vgmstream-web/#base=https://example.com/&play=file.txtp&sub=file.wem&dir=wem/file.wem`
+
+This loads files `https://example.com/file.txtp` and `https://example.com/file.wem`, renaming the second one to `wem/file.wem`, and playing the first one.
+
 ## Compiling vgmstream-cli.js/.wasm
 These instructions have been tested on Ubuntu 21.04, but should also work on other Linux distros.
 ```sh
