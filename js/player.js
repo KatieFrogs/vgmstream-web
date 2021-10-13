@@ -347,27 +347,27 @@ function cleanup(){
 }
 
 async function validateUrl(input){
-	var url = new URL(input)
-	if(url.protocol !== "http:" && (url.protocol !== "https:" || location.protocol !== "https:")){
-		throw new Error(input)
+	try{
+		var url = new URL(input)
+	}catch(e){}
+	if(!url || url.protocol !== "http:" && (url.protocol !== "https:" || location.protocol !== "https:")){
+		throw new Error("Not a valid URL\n" + input)
 	}
 }
 
 async function checkHash(){
-	locked = true
-	await cliWorker.load()
-	var hash = location.hash.slice(1)
-	if(!hash){
-		locked = false
+	var hashParams = new URL("a:?" + location.hash.slice(1)).searchParams
+	if(!hashParams.has("play") && !hashParams.has("sub")){
 		return
 	}
 	fade(1, true)
+	await cliWorker.load()
 	var promises = []
 	var files = []
 	var base = ""
 	var renameLast = () => {}
 	var selectedFiles = []
-	new URL("a:?" + hash).searchParams.forEach((value, name) => {
+	hashParams.forEach((value, name) => {
 		var url = base + value
 		switch(name){
 			case "base":
@@ -388,10 +388,15 @@ async function checkHash(){
 				}
 				promises.push(
 					validateUrl(url)
-					.then(() => fetch(url))
+					.then(() => 
+						fetch(url)
+						.catch(error => {
+							throw new Error("Failed to download (connection or CORS error)\n" + url)
+						})
+					)
 					.then(response => {
 						if(!response.ok){
-							throw new Error(response)
+							throw new Error("Failed to download (HTTP " + response.status + ")\n" + url)
 						}
 						return response.arrayBuffer()
 					})
@@ -411,7 +416,7 @@ async function checkHash(){
 	try{
 		await Promise.all(promises)
 	}catch(e){
-		console.warn(e)
+		alert(e)
 		return
 	}finally{
 		fade(0)
