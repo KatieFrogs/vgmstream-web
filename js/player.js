@@ -365,8 +365,7 @@ async function checkHash(){
 		return
 	}
 	fade(1, true)
-	await cliWorker.load()
-	var promises = []
+	var promises = [cliWorker.load()]
 	var files = []
 	var base = ""
 	var renameLast = () => {}
@@ -556,4 +555,7 @@ logdropdown.addEventListener("keydown", event => {
 	if(event.key === "Enter" && !locked){
 		logbox.classList.toggle("open")
 	}
+})
+addEventListener("hashchange", event => {
+	location.reload()
 })
