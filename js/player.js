@@ -21,11 +21,7 @@ var dirPromise
 var locked = false
 
 function corsBridge(url){
-	return fetch("https://cors.bridged.cc/" + url, {
-		headers: {
-			"x-cors-grida-api-key": "1c8362e9-1a4d-42c1-aef6-8133bcaa33cd"
-		}
-	})
+	return fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url))
 }
 
 var canPickDir = (typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype) && !(/Android|iPhone|iPad/.test(navigator.userAgent))
