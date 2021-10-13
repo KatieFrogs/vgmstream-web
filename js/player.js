@@ -20,6 +20,14 @@ var noConverting
 var dirPromise
 var locked = false
 
+function corsBridge(url){
+	return fetch("https://cors.bridged.cc/" + url, {
+		headers: {
+			"x-cors-grida-api-key": "1c8362e9-1a4d-42c1-aef6-8133bcaa33cd"
+		}
+	})
+}
+
 var canPickDir = (typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype) && !(/Android|iPhone|iPad/.test(navigator.userAgent))
 if(canPickDir){
 	selectdirbtn.style.display = "block"
@@ -390,6 +398,7 @@ async function checkHash(){
 					validateUrl(url)
 					.then(() => 
 						fetch(url)
+						.catch(error => corsBridge(url))
 						.catch(error => {
 							throw new Error("Failed to download (connection or CORS error)\n" + url)
 						})
