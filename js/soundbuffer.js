@@ -1,7 +1,9 @@
-﻿class SoundBuffer{
+﻿"use strict"
+
+class SoundBuffer{
 	constructor(){
 		var AudioContext = window.AudioContext || window.webkitAudioContext
-		this.context = new AudioContext()
+		this.context = new AudioContext({latencyHint: "playback"})
 		this.audioDecoder = this.context.decodeAudioData.bind(this.context)
 		this.oggDecoder = this.audioDecoder
 		this.pageClickedBind = this.pageClicked.bind(this)

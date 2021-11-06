@@ -1,3 +1,5 @@
+"use strict"
+
 var wasmDir = "../vgmstream/"
 
 async function messageEvent(data){
@@ -36,16 +38,28 @@ async function messageEvent(data){
 	})
 }
 
-async function convertDir(dir, inputFilename){
+function setupDir(dir, callback){
 	var wfs = "/workerfs"
-	var outputFilename = "/output.wav"
 	FS.mkdir(wfs)
 	FS.mount(WORKERFS, {
 		files: dir
 	}, wfs)
-	var output = vgmstream("-o", outputFilename, "-i", wfs + "/" + inputFilename)
-	FS.unmount(wfs)
-	FS.rmdir(wfs)
+	FS.chdir(wfs)
+	try{
+		var output = callback()
+	}finally{
+		FS.chdir("/")
+		FS.unmount(wfs)
+		FS.rmdir(wfs)
+	}
+	return output
+}
+
+async function convertDir(dir, inputFilename){
+	var outputFilename = "/output.wav"
+	
+	var output = setupDir(dir, () => vgmstream("-I", "-o", outputFilename, "-i", inputFilename))
+	
 	if(output.error){
 		return output
 	}

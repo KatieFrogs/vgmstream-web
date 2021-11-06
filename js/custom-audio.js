@@ -1,77 +1,25 @@
+"use strict"
+
 var buffer = new SoundBuffer()
 
 class CustomAudio extends HTMLElement{
 	#updateInterval = 200
 	#seekStep = 0.1
 	
-	#css = [`:host{
-		display: inline-block;
-		width: 300px;
-		height: 54px;
-		vertical-align: top;
-	}`, `:host[hidden]{
-		display: none;
-	}`, `:host(:not([controls])){
-		display: none !important;
-	}`, `.player{
-		display: inline-flex;
-		background-color: #f1f3f4;
-		color: #000;
-		width: 100%;
-		height: 54px;
-		font-size: 14px;
-		font-family: sans-serif;
-		padding: 11px 10px;
-		border-radius: 27px;
-		box-sizing: border-box;
-		align-items: center;
-		overflow: hidden;
-		cursor: default;
-		user-select: none;
-	}`, `.player .play{
-		width: 32px;
-		height: 32px;
-		padding: 10px;
-		cursor: pointer;
-		border: 0;
-		border-radius: 16px;
-		background-color: transparent;
-		transition: 0.2s background-color;
-		color: inherit;
-	}`, `.player .play:hover,
-	.player .play:focus-visible{
-		background-color: rgba(125, 127, 128, 0.11);
-	}`, `.player .play svg{
-		display: block;
-		fill: currentColor;
-	}`, `.player .play.pause .icon-pause,
-	.player .play:not(.pause) .icon-play{
-		display: none;
-	}`, `.player .timestamp{
-		margin: 0 5px;
-		white-space: nowrap;
-	}`, `.player .seek{
-		min-width: 0;
-		flex-grow: 2;
-		margin: 0 15px 0 10px;
-		padding: 10px 0;
-		cursor: pointer;
-		filter: saturate(0);
-	}`, `.player:not(.loaded) .play,
-	.player:not(.loaded) .seek{
-		opacity: 0.3;
-		pointer-events: none;
-	}`]
 	constructor(){
 		super()
 		this.attachShadow({mode: "open"})
+		this.#addStyle()
+	}
+	async #addStyle(){
+		var css = await (await fetch("css/custom-audio.css")).text()
 		if(this.shadowRoot.adoptedStyleSheets){
 			var style = new CSSStyleSheet()
-			this.#css.forEach(rule => style.insertRule(rule))
+			await style.replace(css)
 			this.shadowRoot.adoptedStyleSheets = [style]
 		}else{
 			var style = document.createElement("style")
-			style.appendChild(document.createTextNode(this.#css.join("")))
+			style.appendChild(document.createTextNode(css))
 			this.shadowRoot.append(style)
 		}
 	}

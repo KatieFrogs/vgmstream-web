@@ -1,3 +1,5 @@
+"use strict"
+
 class DarkToggle{
 	constructor(){
 		this.toggles = new Set()

@@ -1,3 +1,5 @@
+"use strict"
+
 var browse = document.getElementById("browse")
 var browsedir = document.getElementById("browsedir")
 var selectbtn = document.getElementById("selectbtn")
@@ -20,11 +22,17 @@ var noConverting
 var dirPromise
 var locked = false
 
-function corsBridge(url){
-	return fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url))
+function corsBridge(input){
+	var url = new URL("https://api.allorigins.win/raw")
+	url.searchParams.append("url", input)
+	return fetch(url.toString())
 }
 
-var canPickDir = (typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype) && !(/Android|iPhone|iPad/.test(navigator.userAgent))
+var canPickDir = (
+	typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype
+) && !["Android", "iPhone", "iPad"].find(input =>
+	navigator.userAgent.indexOf(input) !== -1
+)
 if(canPickDir){
 	selectdirbtn.style.display = "block"
 }
@@ -54,7 +62,7 @@ class WorkerWrapper{
 		this.worker.addEventListener("message", event => this.messageEvent(event.data))
 		this.worker.addEventListener("error", event => this.messageEvent({
 			subject: "load",
-			error: "Error loading " + url
+			error: "Error loading {}".fomrat(url)
 		}))
 		this.on("load").then(() => {
 			this.loaded = true
@@ -147,14 +155,13 @@ async function convertDir(files, inputFilename){
 }
 
 function insertAudio(response){
-	var wfs = "/workerfs/"
 	if(!response || response.error){
 		if(!response){
 			throw new Error()
 		}else if(response.error.type === "wasm"){
 			alert("The WebAssembly application crashed while decoding this file")
 		}else if(response.stderr){
-			alert("Could not convert file: " + response.stderr.replaceAll(wfs, "").trim())
+			alert("Could not convert file: {}".format(response.stderr.trim()))
 		}else{
 			throw new Error(response.error)
 		}
@@ -163,61 +170,186 @@ function insertAudio(response){
 			URL.revokeObjectURL(audio.src)
 		}
 		audio.src = response.url
-		var sampleRate = response.stdout.match(/sample rate: (\d+) Hz/)
-		var startSamples = response.stdout.match(/loop start: (\d+) samples/)
-		var endSamples = response.stdout.match(/loop end: (\d+) samples/)
-		audio.loop = false
-		if(sampleRate && startSamples){
-			var hz = parseFloat(sampleRate[1])
-			if(hz > 0){
-				audio.loop = true
-				audio.loopStart = (startSamples[1] || 0) / hz
-				if(endSamples){
-					audio.loopEnd = (endSamples[1] || 0) / hz
-				}
-			}
-		}
 		dlfilename = response.outputFilename
 		filenamebox.innerText = response.inputFilename
-		var stdout = response.stdout.replaceAll(wfs, "").trim()
-		var stderr = response.stderr.replaceAll(wfs, "").trim()
-		var logMessage = (stdout + "\n" + stderr).trim()
-		logTable(log, logMessage)
+		
+		var streamInfo = response.stdout.trim().split("\n").map(input => {
+			try{
+				return JSON.parse(input)
+			}catch(e){
+				return null
+			}
+		})[0]
+		
+		if(streamInfo && streamInfo.loopingInfo){
+			audio.loop = true
+			audio.loopStart = streamInfo.loopingInfo.start / streamInfo.sampleRate
+			audio.loopEnd = streamInfo.loopingInfo.end / streamInfo.sampleRate
+		}else{
+			audio.loop = false
+		}
+		outputTable(streamInfo, response.stderr.trim())
 		audiobox.style.display = "block"
 	}
 }
 
-function logTable(log, logMessage){
-	var tableRegex = /(?:.+?: .*?(?:\n|$))+/g
+function outputTable(streamInfo, stderr){
 	var index = 0
 	log.innerText = ""
-	while((matches = tableRegex.exec(logMessage)) !== null){
-		if(matches.index === tableRegex.lastIndex){
-			tableRegex.lastIndex++
+	if(stderr){
+		var div = document.createElement("div")
+		div.innerText = stderr
+		log.appendChild(div)
+	}
+	if(!streamInfo){
+		return
+	}
+	
+	var table = document.createElement("table")
+	var insertRow = function(name, info){
+		var tr = document.createElement("tr")
+		var th = document.createElement("th")
+		th.innerText = "{}:".format(name)
+		tr.appendChild(th)
+		var td = document.createElement("td")
+		td.innerText = info
+		tr.appendChild(td)
+		table.appendChild(tr)
+	}
+	
+	for(var i in streamInfo){
+		if(streamInfo[i] !== null && i !== "version"){
+			var name = unCamelCase(i)
+			var info = streamInfo[i]
+			var hz = streamInfo.sampleRate
+			switch(i){
+				case "sampleRate":
+					insertRow(name, formatSize(info, {
+						hz: true
+					}))
+					break
+				case "loopingInfo":
+					insertRow(
+						"Loop start",
+						"{} ({})".format(formatTime(info.start / hz), samples(info.start))
+					)
+					insertRow(
+						"Loop end",
+						"{} ({})".format(formatTime(info.end / hz), samples(info.end))
+					)
+					break
+				case "interleaveInfo":
+					if(info.firstBlock){
+						var bytes = Math.abs(info.firstBlock) === 1 ? "byte" : "bytes"
+						insertRow(
+							"Interleave first block",
+							"0x{} {}".format(info.firstBlock.toString(16), bytes)
+						)
+					}
+					var bytes = Math.abs(info.lastBlock) === 1 ? "byte" : "bytes"
+					insertRow(
+						"Interleave last block",
+						"0x{} {}".format(info.lastBlock.toString(16), bytes)
+					)
+					break
+				case "numberOfSamples":
+					insertRow(
+						"Stream duration",
+						"{} ({})".format(formatTime(info / hz), samples(info))
+					)
+					break
+				case "bitrate":
+					insertRow(name, formatSize(info, {
+						perSecond: true,
+						decimal: true
+					}))
+					break
+				case "streamInfo":
+					if(info.total !== 1){
+						insertRow(
+							"Stream index",
+							"{} / {}".format(info.index, info.total)
+						)
+					}
+					if(info.name){
+						insertRow("Stream name", info.name)
+					}
+					break
+				default:
+					if(typeof info === "object"){
+						info = JSON.stringify(info)
+					}
+					insertRow(name, info)
+					break
+			}
 		}
-		if(index < matches.index){
-			var div = document.createElement("div")
-			div.innerText = logMessage.slice(index, matches.index)
-			log.appendChild(div)
+	}
+	log.appendChild(table)
+}
+
+function unCamelCase(input){
+	var output = ""
+	for(var i = 0; i < input.length; i++){
+		var char = input.charAt(i)
+		if(i === 0){
+			output += char.toUpperCase()
+		}else{
+			var lower = char.toLowerCase()
+			if(char !== lower){
+				output += " " + lower
+			}else{
+				output += char
+			}
 		}
-		var table = document.createElement("table")
-		matches.forEach(match => {
-			match.split("\n").forEach(line => {
-				if(line){
-					var colon = line.indexOf(": ")
-					var tr = document.createElement("tr")
-					var th = document.createElement("th")
-					th.innerText = colon !== -1 ? line.slice(0, colon + 1) : ""
-					tr.appendChild(th)
-					var td = document.createElement("td")
-					td.innerText = colon !== -1 ? line.slice(colon + 2) : line
-					tr.appendChild(td)
-					table.appendChild(tr)
-				}
-			})
-		})
-		log.appendChild(table)
-		index = tableRegex.lastIndex
+	}
+	return output
+}
+
+function formatTime(seconds){
+	var minus = seconds < 0 ? "-" : ""
+	seconds = Math.abs(seconds)
+	var ms = Math.floor(seconds % 1 * 1000).toString().padStart(3, "0")
+	var s = Math.floor(seconds % 60).toString().padStart(2, "0")
+	var m = Math.floor(seconds / 60 % 60).toString()
+	var h = Math.floor(seconds / 60 / 60)
+	if(h){
+		return "{}{}:{}:{}.{}".format(minus, h, m.padStart(2, "0"), s, ms)
+	}
+	return "{}{}:{}.{}".format(minus, m, s, ms)
+}
+
+function formatSize(bytes, options){
+	if(options.decimal){
+		var units = ["B", "kB", "MB", "GB"]
+		var power = 1000
+	}else if(options.hz){
+		var units = ["Hz", "kHz"]
+		var power = 1000
+	}else{
+		var units = ["B", "KiB", "MiB", "GiB"]
+		var power = 0x400
+	}
+	for(var i = 0; i < units.length - 1; i++){
+		if(Math.abs(bytes) < power){
+			break
+		}
+		bytes /= power
+	}
+	if(options.hz){
+		if(bytes % 1 === 0){
+			bytes = "{}.0".format(bytes)
+		}
+	}else{
+		bytes = Math.floor(bytes)
+	}
+	return "{} {}{}".format(bytes, units[i], options.perSecond ? "/s" : "")
+}
+
+function samples(input){
+	if(Math.abs(input) === 1){
+		return "{} sample".format(input)
+	}else{
+		return "{} samples".format(input)
 	}
 }
 
@@ -354,8 +486,8 @@ async function validateUrl(input){
 	try{
 		var url = new URL(input)
 	}catch(e){}
-	if(!url || url.protocol !== "http:" && (url.protocol !== "https:" || location.protocol !== "https:")){
-		throw new Error("Not a valid URL\n" + input)
+	if(!url || url.protocol !== "http:" && url.protocol !== "https:"){
+		throw new Error("Not a valid URL\n{}".format(input))
 	}
 }
 
@@ -395,12 +527,12 @@ async function checkHash(){
 						fetch(url)
 						.catch(error => corsBridge(url))
 						.catch(error => {
-							throw new Error("Failed to download (connection or CORS error)\n" + url)
+							throw new Error("Failed to download (connection or CORS error)\n{}".format(url))
 						})
 					)
 					.then(response => {
 						if(!response.ok){
-							throw new Error("Failed to download (HTTP " + response.status + ")\n" + url)
+							throw new Error("Failed to download (HTTP {})\n{}".format(response.status, url))
 						}
 						return response.arrayBuffer()
 					})
@@ -435,6 +567,13 @@ async function checkHash(){
 	}
 }
 
+String.prototype.format = function(){
+	var i = 0
+	return this.replaceAll("{}", input =>
+		typeof arguments[i] !== "undefined" ? arguments[i++] : input
+	)
+}
+
 document.addEventListener("dragover", event => {
 	event.preventDefault()
 	event.dataTransfer.dropEffect = "copy"
@@ -461,8 +600,8 @@ document.addEventListener("drop", async event => {
 		var dropPromises = []
 		for(var i = 0; i < items.length; i++){
 			let promise
-			if(this.fileSystem){
-				promise = item.getAsFileSystemHandle().then(file => walkFilesystem(file))
+			if(fileSystem){
+				promise = items[i].getAsFileSystemHandle().then(file => walkFilesystem(file))
 			}else{
 				var entry = items[i].webkitGetAsEntry()
 				if(entry){
