@@ -173,13 +173,19 @@ function insertAudio(response){
 		dlfilename = response.outputFilename
 		filenamebox.innerText = response.inputFilename
 		
+		var errors = []
+		var stderr = response.stderr.trim()
+		if(stderr){
+			errors.push(stderr)
+		}
 		var streamInfo = response.stdout.trim().split("\n").map(input => {
 			try{
 				return JSON.parse(input)
 			}catch(e){
+				errors.push(input)
 				return null
 			}
-		})[0]
+		}).filter(Boolean)[0]
 		
 		if(streamInfo && streamInfo.loopingInfo){
 			audio.loop = true
@@ -188,17 +194,17 @@ function insertAudio(response){
 		}else{
 			audio.loop = false
 		}
-		outputTable(streamInfo, response.stderr.trim())
+		outputTable(streamInfo, errors)
 		audiobox.style.display = "block"
 	}
 }
 
-function outputTable(streamInfo, stderr){
+function outputTable(streamInfo, errors){
 	var index = 0
 	log.innerText = ""
-	if(stderr){
+	if(errors.length){
 		var div = document.createElement("div")
-		div.innerText = stderr
+		div.innerText = errors.join("\n")
 		log.appendChild(div)
 	}
 	if(!streamInfo){
