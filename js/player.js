@@ -451,7 +451,7 @@ async function selectFile(files){
 	var file = await new Promise(resolve => {
 		dirPromise = resolve
 		fileSelected = event => {
-			if(event.type = "submit"){
+			if(event.type === "submit"){
 				event.preventDefault()
 			}
 			if(dirselect.value){
