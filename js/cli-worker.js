@@ -1,6 +1,13 @@
 "use strict"
 
-var wasmDir = "../vgmstream/"
+var wasmDir = "https://nightly.link/vgmstream/vgmstream/workflows/cmake-wasm/master/vgmstream-wasm.zip"
+var wasmZip = true
+
+function corsBridge(input){
+	var url = new URL("https://api.allorigins.win/raw")
+	url.searchParams.append("url", input)
+	return fetch(url.toString())
+}
 
 async function messageEvent(data){
 	var input = data.content
@@ -127,18 +134,68 @@ function vgmstream(...args){
 	return output
 }
 
+function errorLoading(file){
+	postMessage({
+		subject: "load",
+		error: "Error loading " + file
+	})
+}
+
 async function loadCli(){
-	try{
-		(0, eval)(await (await fetch(wasmDir + "vgmstream-cli.js")).text())
-	}catch(e){
-		return postMessage({
-			subject: "load",
-			error: "Error loading vgmstream-cli.js"
+	var wasmBlobUrl
+	if(wasmZip){
+		var jsZip, vgmZip
+		var promises = []
+		promises.push(new Promise(async (resolve, reject) => {
+			try{
+				jsZip = await (await fetch("lib/jszip.min.js")).text()
+			}catch(e){
+				errorLoading("jszip.min.js")
+				return reject()
+			}
+			resolve()
+		}))
+		promises.push(new Promise(async (resolve, reject) => {
+			try{
+				vgmZip = await (await corsBridge(wasmDir)).blob()
+			}catch(e){
+				errorLoading("vgmstream-wasm.zip")
+				return reject()
+			}
+			resolve()
+		}))
+		await Promise.all(promises)
+		eval.bind()(jsZip)
+		var zip = new JSZip()
+		try{
+			var zipContent = await zip.loadAsync(vgmZip)
+		}catch(e){
+			return errorLoading("vgmstream-wasm.zip")
+		}
+		var wasmBlob = new Blob([
+			await zip.file("vgmstream-cli.wasm").async("arraybuffer")
+		], {
+			type: "application/wasm"
 		})
+		wasmBlobUrl = URL.createObjectURL(wasmBlob)
+		wasmUri = name => wasmBlobUrl
+		var cliJs = await zip.file("vgmstream-cli.js").async("string")
+		eval.bind()(cliJs)
+	}else{
+		wasmUri = name => wasmDir + name
+		try{
+			var cliJs = await (await fetch(wasmDir + "vgmstream-cli.js")).text()
+		}catch(e){
+			return errorLoading("vgmstream-cli.js")
+		}
 	}
+	eval.bind()(cliJs)
 	await new Promise(resolve => {
 		Module["onRuntimeInitialized"] = resolve
 	})
+	if(wasmBlobUrl){
+		URL.revokeObjectURL(wasmBlobUrl)
+	}
 	return postMessage({
 		subject: "load"
 	})
@@ -154,6 +211,7 @@ function cleanError(error){
 	return output
 }
 
+var wasmUri
 var stdoutBuffer = ""
 var stderrBuffer = ""
 var Module = {
@@ -169,7 +227,7 @@ var Module = {
 		})
 	},
 	noInitialRun: true,
-	locateFile: name => wasmDir + name
+	locateFile: name => wasmUri(name)
 }
 addEventListener("message", event => messageEvent(event.data))
 loadCli()
