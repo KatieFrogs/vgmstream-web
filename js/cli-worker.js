@@ -165,7 +165,7 @@ async function loadCli(){
 			resolve()
 		}))
 		await Promise.all(promises)
-		eval.bind()(jsZip)
+		eval(jsZip)
 		var zip = new JSZip()
 		try{
 			var zipContent = await zip.loadAsync(vgmZip)
@@ -180,7 +180,6 @@ async function loadCli(){
 		wasmBlobUrl = URL.createObjectURL(wasmBlob)
 		wasmUri = name => wasmBlobUrl
 		var cliJs = await zip.file("vgmstream-cli.js").async("string")
-		eval.bind()(cliJs)
 	}else{
 		wasmUri = name => wasmDir + name
 		try{
