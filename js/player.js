@@ -121,7 +121,11 @@ class WorkerWrapper{
 }
 if(wasmSupported){
 	var cliWorker = new WorkerWrapper(jsDir + "cli-worker.js")
-	checkHash()
+	checkFileHandling().then(response => {
+		if(!response){
+			checkHash()
+		}
+	})
 }
 
 function vgmstream(...args){
@@ -497,6 +501,50 @@ async function validateUrl(input){
 	}
 }
 
+function checkFileHandling(){
+	return new Promise(resolve => {
+		if("launchQueue" in window && "files" in LaunchParams.prototype){
+			launchQueue.setConsumer(async launchParams => {
+				if(launchParams.files.length){
+					resolve(true)
+					fade(1, true)
+					var promises = [cliWorker.load()]
+					var files = []
+					for(let i = 0; i < launchParams.files.length; i++){
+						promises.push((async () => {
+							var file = launchParams.files[i]
+							await filePermission(file)
+							files.push(new File([await file.getFile()], file.name))
+						})().catch(e => {
+							console.warn(e)
+						}))
+					}
+					try{
+						await Promise.all(promises)
+					}catch(e){
+						alert(e)
+						return
+					}finally{
+						fade(0)
+					}
+					cleanup()
+					if(!noConverting && files.length){
+						if(files.length === 1){
+							insertAudio(await convertDir(files, files[0].name))
+						}else{
+							displayFiles(files)
+						}
+					}
+				}else{
+					resolve(false)
+				}
+			})
+		}else{
+			resolve(false)
+		}
+	})
+}
+
 async function checkHash(){
 	var hashParams = new URL("a:?" + location.hash.slice(1)).searchParams
 	if(!hashParams.has("play") && !hashParams.has("sub")){
@@ -704,3 +752,8 @@ logdropdown.addEventListener("keydown", event => {
 addEventListener("hashchange", event => {
 	location.reload()
 })
+
+if("serviceWorker" in navigator){
+	navigator.serviceWorker.register("service-worker.js")
+}
+addEventListener("beforeinstallprompt", event => {})

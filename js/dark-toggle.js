@@ -14,9 +14,7 @@ class DarkToggle{
 			}
 		}
 		
-		this.colorscheme = document.createElement("meta")
-		this.colorscheme.name = "color-scheme"
-		document.head.appendChild(this.colorscheme)
+		this.colorscheme = document.querySelector("meta[name=color-scheme]")
 		
 		this.media = matchMedia("(prefers-color-scheme: dark)")
 		this.media.addEventListener("change", () => {
@@ -54,9 +52,9 @@ class DarkToggle{
 			return
 		}
 		this.dark = dark
-		this.colorscheme.content = dark ? "dark" : "light"
+		this.colorscheme.content = this.autoLocked ? (dark ? "dark" : "light") : "light dark"
 		this.styles.forEach(style => {
-			style.media = dark ? "all" : "not all"
+			style.media = this.autoLocked ? (dark ? "all" : "not all") : "(prefers-color-scheme: dark)"
 			style.disabled = !dark
 		})
 		this.toggles.forEach(toggle => {
