@@ -5,7 +5,7 @@ body{
 main{
 	background-color: #0d1117;
 }
-footer{
+#footer{
 	background-color: #06070a;
 }
 .greenbutton{
@@ -17,10 +17,10 @@ footer{
 	background-color: #360;
 	color: #ffe;
 }
-footer a{
+#footer a{
 	color: #494;
 }
-footer a:hover{
+#footer a:hover{
 	color: #8d8;
 }
 #fadeoverlay{
@@ -32,6 +32,9 @@ footer a:hover{
 #audio::part(player){
 	background-color: #000;
 	color: #fff;
+}
+#audio::part(seek){
+	accent-color: #5b9d2f;
 }
 #log{
 	background-color: #000;

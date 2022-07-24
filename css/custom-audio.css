@@ -59,7 +59,12 @@
 	margin: 0 15px 0 10px;
 	padding: 10px 0;
 	cursor: pointer;
-	filter: saturate(0);
+	accent-color: #777;
+}
+@supports not (accent-color: #777) {
+	.player .seek{
+		filter: saturate(0);
+	}
 }
 .player:not(.loaded) .play,
 .player:not(.loaded) .seek{

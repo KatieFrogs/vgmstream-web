@@ -21,6 +21,7 @@ var dlfilename
 var noConverting
 var dirPromise
 var locked = false
+var hashLock = false
 
 function corsBridge(input){
 	var url = new URL("https://api.allorigins.win/raw")
@@ -28,11 +29,16 @@ function corsBridge(input){
 	return fetch(url.toString())
 }
 
-var canPickDir = (
-	typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype
-) && !["Android", "iPhone", "iPad"].find(input =>
-	navigator.userAgent.indexOf(input) !== -1
-)
+var canPickDir = typeof showDirectoryPicker === "function" || "webkitdirectory" in HTMLInputElement.prototype
+if(canPickDir){
+	if(navigator.userAgentData && navigator.userAgentData.platform){
+		canPickDir = !navigator.userAgentData.mobile
+	}else{
+		canPickDir = !["Android", "iPhone", "iPad"].find(input =>
+			navigator.userAgent.indexOf(input) !== -1
+		)
+	}
+}
 if(canPickDir){
 	selectdirbtn.style.display = "block"
 }
@@ -62,7 +68,7 @@ class WorkerWrapper{
 		this.worker.addEventListener("message", event => this.messageEvent(event.data))
 		this.worker.addEventListener("error", event => this.messageEvent({
 			subject: "load",
-			error: "Error loading {}".fomrat(url)
+			error: "Error loading {}".format(url)
 		}))
 		this.on("load").then(() => {
 			this.loaded = true
@@ -545,8 +551,27 @@ function checkFileHandling(){
 	})
 }
 
+async function checkShareTarget(){
+	try{
+		var shareCache = await caches.open("share-target")
+		var response = await shareCache.match("shared-file")
+		if(response){
+			const blob = await response.blob()
+			const file = new File([blob], response.headers.get("name"))
+			insertAudio(await convertDir([file], file.name))
+			await shareCache.delete("shared-file")
+		}
+		hashLock = true
+		history.replaceState("", "", location.pathname)
+		hashLock = false
+	}catch(e){}
+}
+
 async function checkHash(){
 	var hashParams = new URL("a:?" + location.hash.slice(1)).searchParams
+	if(hashParams.has("share-target")){
+		return checkShareTarget()
+	}
 	if(!hashParams.has("play") && !hashParams.has("sub")){
 		return
 	}
@@ -750,7 +775,9 @@ logdropdown.addEventListener("keydown", event => {
 	}
 })
 addEventListener("hashchange", event => {
-	location.reload()
+	if(!hashLock){
+		location.reload()
+	}
 })
 
 if("serviceWorker" in navigator){

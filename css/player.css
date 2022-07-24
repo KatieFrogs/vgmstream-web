@@ -81,6 +81,9 @@ main{
 #audio{
 	width: 100%;
 }
+#audio::part(seek){
+	accent-color: #57972c;
+}
 #logbox{
 	margin-top: 20px;
 }
@@ -156,7 +159,7 @@ main{
 	pointer-events: auto;
 	color: #fff;
 }
-footer{
+#footer{
 	position: relative;
 	margin-top: -50px;
 	padding: 1em 3em;
@@ -165,26 +168,26 @@ footer{
 	width: 100%;
 	box-sizing: border-box;
 }
-footer ul{
+#footer ul{
 	margin: 0 0 0 0.5em;
 	padding: 0;
 	display: inline-flex;
 	gap: 30px;
 	flex-wrap: wrap;
 }
-footer li{
+#footer li{
 	white-space: nowrap;
 }
-footer li:first-child{
+#footer li:first-child{
 	list-style: none;
 }
-footer a{
+#footer a{
 	color: #373;
 	padding: 1em 0;
 	text-decoration: none;
 	cursor: pointer;
 }
-footer a:hover{
+#footer a:hover{
 	color: #000;
 	text-decoration: underline;
 }

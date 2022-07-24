@@ -1,11 +1,13 @@
-var version = "v22.06.09"
+var version = "v22.07.24"
 var wasmVersion = "wasm"
+var shareTargetVersion = "share-target"
 
 var urls = [
 	"./",
 	"css/custom-audio.css",
 	"css/player-dark.css",
 	"css/player.css",
+	"img/apple-touch-icon.png",
 	"img/favicon.png",
 	"index.html",
 	"js/cli-worker.js",
@@ -39,7 +41,7 @@ async function workerActivate(){
 	await self.clients.claim()
 }
 async function deleteOldCaches(){
-	var currentCaches = [version, wasmVersion]
+	var currentCaches = [version, wasmVersion, shareTargetVersion]
 	var promises = []
 	var cacheKeys = await caches.keys()
 	cacheKeys.forEach(cache => {
@@ -102,9 +104,27 @@ async function addTimestamp(request, copy){
 		headers: headers
 	}))
 }
+async function shareTarget(event){
+	var request = event.request
+	var formData = await request.formData()
+	var file = formData.get("file")
+	var shareCache = await caches.open(shareTargetVersion)
+	var headers = new Headers()
+	headers.append("name", file.name)
+	var response = new Response(file, {
+		headers: headers
+	})
+	await shareCache.put("shared-file", response)
+	var url = new URL(request.url)
+	url.searchParams.delete("share-target")
+	url.hash = "#share-target"
+	return Response.redirect(url.toString(), 303)
+}
 self.addEventListener("fetch", event => {
 	var request = event.request
-	if(request.url.startsWith(self.location.origin + "/") || request.url === wasmDir){
-		event.respondWith(workerFetch(event))
+	if(request.method === "POST" && request.url.endsWith("?share-target")){
+		return event.respondWith(shareTarget(event))
+	}else if(request.url.startsWith(self.location.origin + "/") || request.url === wasmDir){
+		return event.respondWith(workerFetch(event))
 	}
 })

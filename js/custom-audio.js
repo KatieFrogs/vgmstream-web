@@ -68,6 +68,7 @@ class CustomAudio extends HTMLElement{
 		this.#seek.min = "0"
 		this.#seek.step = this.#seekStep
 		this.#seek.classList.add("seek")
+		this.#seek.part = "seek"
 		this.#onSeekBind = this.#onSeek.bind(this)
 		this.#seek.addEventListener("input", this.#onSeekBind)
 		this.#player.appendChild(this.#seek)
