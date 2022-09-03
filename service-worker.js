@@ -17,7 +17,7 @@ var urls = [
 	"js/soundbuffer.js"
 ]
 
-var wasmDir = "https://vgmstream-builds.s3.us-west-1.amazonaws.com/js/"
+var wasmDir = "https://cdn.vgmstream.org/js/"
 var wasmVer = wasmDir + "version"
 var wasmUrls = [
 	wasmVer,
