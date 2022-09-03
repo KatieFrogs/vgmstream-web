@@ -1,13 +1,6 @@
 "use strict"
 
-var wasmDir = "https://nightly.link/vgmstream/vgmstream/workflows/cmake-wasm/master/vgmstream-wasm.zip"
-var wasmZip = true
-
-function corsBridge(input){
-	var url = new URL("https://api.allorigins.win/raw")
-	url.searchParams.append("url", input)
-	return fetch(url.toString())
-}
+var wasmDir = "https://vgmstream-builds.s3.us-west-1.amazonaws.com/js/"
 
 async function messageEvent(data){
 	var input = data.content
@@ -17,6 +10,9 @@ async function messageEvent(data){
 		switch(data.subject){
 			case "convertDir":
 				output = await convertDir(...input)
+				break
+			case "convertFile":
+				output = await convertFile(...input)
 				break
 			case "vgmstream":
 				output = vgmstream(...input)
@@ -62,27 +58,49 @@ function setupDir(dir, callback){
 	return output
 }
 
-async function convertDir(dir, inputFilename){
-	var outputFilename = "/output.wav"
+async function convertDir(dir, inputFilename, arrayBuffer){
+	var outputFilename = "/" + Math.random() + "output.wav"
 	
 	var output = setupDir(dir, () => vgmstream("-I", "-o", outputFilename, "-i", inputFilename))
 	
+	return getOutput(output, inputFilename, outputFilename, arrayBuffer)
+}
+
+async function convertFile(data, inputFilename, arrayBuffer){
+	var outputFilename = "/" + Math.random() + "output.wav"
+	
+	writeFile(inputFilename, data)
+	var output = vgmstream("-I", "-o", outputFilename, "-i", inputFilename)
+	deleteFile(inputFilename)
+	
+	return getOutput(output, inputFilename, outputFilename, arrayBuffer)
+}
+
+function getOutput(output, inputFilename, outputFilename, arrayBuffer){
 	if(output.error){
-		return output
+		deleteFile(outputFilename)
+		var error = output.error
+		error.stdout = output.stdout
+		error.stderr = output.stderr
+		throw error
 	}
 	var wavdata = readFile(outputFilename)
 	if(!wavdata){
-		output.error = {
-			type: "unsupported"
-		}
-		return output
+		var error = new Error("vgmstream: Unsupported file")
+		error.stdout = output.stdout
+		error.stderr = output.stderr
+		throw error
 	}
 	deleteFile(outputFilename)
 	output.inputFilename = inputFilename
 	output.outputFilename = inputFilename + ".wav"
-	output.url = URL.createObjectURL(new Blob([wavdata], {
-		type: "audio/x-wav"
-	}))
+	if(arrayBuffer){
+		output.arrayBuffer = wavdata.buffer
+	}else{
+		output.url = URL.createObjectURL(new Blob([wavdata], {
+			type: "audio/x-wav"
+		}))
+	}
 	return output
 }
 
@@ -117,10 +135,8 @@ function vgmstream(...args){
 	try{
 		callMain(args)
 	}catch(e){
-		error = {
-			type: "wasm",
-			stack: cleanError(e)
-		}
+		e.type = "wasm"
+		throw e
 	}
 	var output = {
 		stdout: stdoutBuffer,
@@ -143,55 +159,32 @@ function errorLoading(file){
 
 async function loadCli(){
 	var wasmBlobUrl
-	if(wasmZip){
-		var jsZip, vgmZip
-		var promises = []
-		promises.push(new Promise(async (resolve, reject) => {
-			try{
-				jsZip = await (await fetch("lib/jszip.min.js")).text()
-			}catch(e){
-				errorLoading("jszip.min.js")
-				return reject()
-			}
-			resolve()
-		}))
-		promises.push(new Promise(async (resolve, reject) => {
-			try{
-				vgmZip = await (await corsBridge(wasmDir)).blob()
-			}catch(e){
-				errorLoading("vgmstream-wasm.zip")
-				return reject()
-			}
-			resolve()
-		}))
-		await Promise.all(promises)
-		eval(jsZip)
-		var zip = new JSZip()
-		try{
-			var zipContent = await zip.loadAsync(vgmZip)
-		}catch(e){
-			return errorLoading("vgmstream-wasm.zip")
-		}
-		var wasmBlob = new Blob([
-			await zip.file("vgmstream-cli.wasm").async("arraybuffer")
-		], {
-			type: "application/wasm"
-		})
-		wasmBlobUrl = URL.createObjectURL(wasmBlob)
-		wasmUri = name => wasmBlobUrl
-		var cliJs = await zip.file("vgmstream-cli.js").async("string")
-	}else{
-		wasmUri = name => wasmDir + name
-		try{
-			var cliJs = await (await fetch(wasmDir + "vgmstream-cli.js")).text()
-		}catch(e){
-			return errorLoading("vgmstream-cli.js")
-		}
+	wasmUri = name => wasmDir + name
+	try{
+		await fetch(wasmDir + "version")
+	}catch(e){}
+	var cliJs
+	try{
+		cliJs = await (await fetch(wasmDir + "vgmstream-cli.js")).text()
+	}catch(e){}
+	if(!cliJs){
+		return errorLoading("vgmstream-cli.js")
 	}
-	eval.bind()(cliJs)
-	await new Promise(resolve => {
-		Module["onRuntimeInitialized"] = resolve
-	})
+	try{
+		eval.bind()(cliJs)
+	}catch(e){
+		console.error(e)
+		return errorLoading("vgmstream-cli.js")
+	}
+	try{
+		await new Promise((resolve, reject) => {
+			Module["onRuntimeInitialized"] = resolve
+			Module["onAbort"] = reject
+		})
+	}catch(e){
+		console.error(e)
+		return errorLoading("vgmstream-cli.wasm")
+	}
 	if(wasmBlobUrl){
 		URL.revokeObjectURL(wasmBlobUrl)
 	}
@@ -201,11 +194,13 @@ async function loadCli(){
 }
 
 function cleanError(error){
-	var output = {}
+	var output = {
+		name: error.name,
+		message: error.message,
+		stack: error.stack
+	}
 	for(var i in error){
-		if(typeof error[i] === "string"){
-			output[i] = error[i]
-		}
+		output[i] = error[i]
 	}
 	return output
 }

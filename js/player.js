@@ -94,7 +94,11 @@ class WorkerWrapper{
 		if(addedType){
 			addedType.forEach(callback => {
 				if(data.error){
-					callback.reject(data.error)
+					var error = new Error(data.error.message)
+					for(var i in data.error){
+						error[i] = data.error[i]
+					}
+					callback.reject(error)
 				}else{
 					callback.resolve(data.content)
 				}
@@ -167,17 +171,21 @@ async function convertDir(files, inputFilename){
 	return response
 }
 
+function workerError(error){
+	if(error.type === "wasm"){
+		error.message = "The WebAssembly application crashed while decoding this file"
+	}else if(error.stderr){
+		error.message = "Could not convert file: {}".format(error.stderr.trim())
+	}
+	alert(error.message)
+	return error
+}
+
 function insertAudio(response){
-	if(!response || response.error){
-		if(!response){
-			throw new Error()
-		}else if(response.error.type === "wasm"){
-			alert("The WebAssembly application crashed while decoding this file")
-		}else if(response.stderr){
-			alert("Could not convert file: {}".format(response.stderr.trim()))
-		}else{
-			throw new Error(response.error)
-		}
+	if(!response){
+		var msg = "Empty response"
+		alert(msg)
+		throw new Error(msg)
 	}else if(response.url){
 		if(audio.src){
 			URL.revokeObjectURL(audio.src)
@@ -209,6 +217,10 @@ function insertAudio(response){
 		}
 		outputTable(streamInfo, errors)
 		audiobox.style.display = "block"
+	}else{
+		var msg = "Worker did not respond with an audio file"
+		alert(msg)
+		throw new Error(msg)
 	}
 }
 
@@ -430,7 +442,12 @@ async function filePermission(file){
 async function displayFiles(files){
 	var inputFilename = await selectFile(files)
 	if(inputFilename){
-		insertAudio(await convertDir(files, inputFilename))
+		try{
+			var audio = await convertDir(files, inputFilename)
+		}catch(e){
+			throw workerError(e)
+		}
+		insertAudio(audio)
 	}
 }
 
@@ -539,7 +556,12 @@ function checkFileHandling(){
 					cleanup()
 					if(!noConverting && files.length){
 						if(files.length === 1){
-							insertAudio(await convertDir(files, files[0].name))
+							try{
+								var audio = await convertDir(files, files[0].name)
+							}catch(e){
+								throw workerError(e)
+							}
+							insertAudio(audio)
 						}else{
 							displayFiles(files)
 						}
@@ -561,7 +583,12 @@ async function checkShareTarget(){
 		if(response){
 			const blob = await response.blob()
 			const file = new File([blob], response.headers.get("name"))
-			insertAudio(await convertDir([file], file.name))
+			try{
+				var audio = await convertDir([file], file.name)
+			}catch(e){
+				throw workerError(e)
+			}
+			insertAudio(audio)
 			await shareCache.delete("shared-file")
 		}
 		hashLock = true
@@ -635,7 +662,12 @@ async function checkHash(hashParams){
 	cleanup()
 	if(!noConverting){
 		if(selectedFiles.length === 1){
-			insertAudio(await convertDir(files, selectedFiles[0]))
+			try{
+				var audio = await convertDir(files, selectedFiles[0])
+			}catch(e){
+				throw workerError(e)
+			}
+			insertAudio(audio)
 		}else{
 			displayFiles(files)
 		}
