@@ -127,11 +127,14 @@ class WorkerWrapper{
 }
 if(wasmSupported){
 	var cliWorker = new WorkerWrapper(jsDir + "cli-worker.js")
-	checkFileHandling().then(response => {
-		if(!response){
-			checkHash()
-		}
-	})
+	var hashParams = new URL("a:?" + location.hash.slice(1)).searchParams
+	if(hashParams.has("share-target")){
+		checkShareTarget()
+	}else if(hashParams.has("play") || hashParams.has("sub")){
+		checkHash(hashParams)
+	}else{
+		checkFileHandling()
+	}
 }
 
 function vgmstream(...args){
@@ -567,14 +570,7 @@ async function checkShareTarget(){
 	}catch(e){}
 }
 
-async function checkHash(){
-	var hashParams = new URL("a:?" + location.hash.slice(1)).searchParams
-	if(hashParams.has("share-target")){
-		return checkShareTarget()
-	}
-	if(!hashParams.has("play") && !hashParams.has("sub")){
-		return
-	}
+async function checkHash(hashParams){
 	fade(1, true)
 	var promises = [cliWorker.load()]
 	var files = []
