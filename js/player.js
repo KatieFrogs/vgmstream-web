@@ -22,6 +22,7 @@ var noConverting
 var dirPromise
 var locked = false
 var hashLock = false
+var dragTarget = null
 
 function corsBridge(input){
 	var url = new URL("https://api.allorigins.win/raw")
@@ -681,6 +682,10 @@ String.prototype.format = function(){
 	)
 }
 
+document.addEventListener("dragenter", event => {
+	event.preventDefault()
+	dragTarget = event.target
+})
 document.addEventListener("dragover", event => {
 	event.preventDefault()
 	event.dataTransfer.dropEffect = "copy"
@@ -688,9 +693,12 @@ document.addEventListener("dragover", event => {
 		fade(0.5)
 	}
 })
-document.addEventListener("dragleave", () => {
-	if(!locked){
-		fade(0)
+document.addEventListener("dragleave", event => {
+	if(dragTarget === event.target){
+		event.preventDefault()
+		if(!locked){
+			fade(0)
+		}
 	}
 })
 document.addEventListener("drop", async event => {
