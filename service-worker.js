@@ -1,4 +1,4 @@
-var version = "v22.09.29"
+var version = "v23.01.30"
 var wasmVersion = "wasm2"
 var shareTargetVersion = "share-target"
 
@@ -17,10 +17,10 @@ var urls = [
 	"js/soundbuffer.js"
 ]
 
-var wasmDir = "https://cdn.vgmstream.org/js/"
+var wasmDir = "https://vgmstream.github.io/vgmstream-releases/web/"
 var wasmVer = wasmDir + "version"
 var wasmUrls = [
-	wasmVer,
+	//wasmVer,
 	wasmDir + "vgmstream-cli.js",
 	wasmDir + "vgmstream-cli.wasm"
 ]

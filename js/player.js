@@ -95,7 +95,7 @@ class WorkerWrapper{
 		if(addedType){
 			addedType.forEach(callback => {
 				if(data.error){
-					var error = new Error(data.error.message)
+					var error = new Error(data.error.message || data.error)
 					for(var i in data.error){
 						error[i] = data.error[i]
 					}
