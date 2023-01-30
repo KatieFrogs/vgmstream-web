@@ -160,9 +160,9 @@ function errorLoading(file){
 async function loadCli(){
 	var wasmBlobUrl
 	wasmUri = name => wasmDir + name
-	/*try{
+	try{
 		await fetch(wasmDir + "version")
-	}catch(e){}*/
+	}catch(e){}
 	var cliJs
 	try{
 		cliJs = await (await fetch(wasmDir + "vgmstream-cli.js")).text()

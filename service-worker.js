@@ -1,4 +1,4 @@
-var version = "v23.01.30"
+var version = "v23.01.30a"
 var wasmVersion = "wasm2"
 var shareTargetVersion = "share-target"
 
@@ -20,7 +20,7 @@ var urls = [
 var wasmDir = "https://vgmstream.github.io/vgmstream-releases/web/"
 var wasmVer = wasmDir + "version"
 var wasmUrls = [
-	//wasmVer,
+	wasmVer,
 	wasmDir + "vgmstream-cli.js",
 	wasmDir + "vgmstream-cli.wasm"
 ]
